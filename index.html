@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Assembly Line Layout</title>
+  <style>
+    :root{
+      --border: 2px solid #000;
+      --thin: 1px solid #000;
+      --bg: #ffffff;
+
+      --green: #10a44a;   /* running */
+      --yellow:#ffd400;   /* problems */
+      --red:   #e01616;   /* down */
+      --blue:  #1e63ff;   /* no operator */
+    }
+
+    html, body { height:100%; }
+    body{
+      margin:0;
+      font-family: Arial, Helvetica, sans-serif;
+      background:#f6f6f6;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden; /* no scrolling */
+    }
+
+    .wrap{
+      width: min(1850px, 98vw);
+      margin: 0 auto;
+      padding: 12px 12px 0;
+      box-sizing:border-box;
+      display:flex;
+      flex-direction:column;
+      height:100%;
+    }
+
+    .board{
+      position:relative;
+      width:100%;
+      flex: 1 1 auto;
+      aspect-ratio: 1828 / 661;
+      background:var(--bg);
+      border:var(--border);
+      box-shadow:0 8px 24px rgba(0,0,0,.08);
+      overflow:hidden;
+    }
+
+    .box{
+      position:absolute;
+      border:var(--thin);
+      background:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      font-size:20px;
+      padding:6px;
+      box-sizing:border-box;
+      text-decoration:none;
+      color:#000;
+      cursor:pointer;
+      transition: transform .06s ease, box-shadow .12s ease, outline .12s ease;
+      user-select:none;
+      line-height:1.1;
+    }
+    .box:hover{ box-shadow:0 3px 10px rgba(0,0,0,.12); transform: translateY(-1px); }
+    .box:active{ transform: translateY(0px); }
+
+    /* Status fills */
+    .status-running{ background:var(--green); }
+    .status-problems{ background:var(--yellow); }
+    .status-down{ background:var(--red); }
+    .status-no_operator{ background:var(--blue); color:#fff; }
+
+    .selected{ outline: 3px solid #1a73e8; outline-offset: 2px; }
+
+    /* Thick divider lines (like your older layout) */
+    .vline{
+      position:absolute;
+      top:2%;
+      bottom:2%;
+      width:0;
+      border-left: 4px solid #000;
+    }
+    .hline{
+      position:absolute;
+      height:0;
+      border-top: 4px solid #000;
+    }
+
+    .packout span{
+      writing-mode: vertical-rl;
+      text-orientation: upright;
+      letter-spacing: 2px;
+      font-size:28px;
+      user-select:none;
+    }
+
+    /* Control panel */
+    .panel{
+      flex: 0 0 auto;
+      margin-top:10px;
+      background:#fff;
+      border:1px solid #ddd;
+      border-radius:10px;
+      padding:12px 14px;
+      box-shadow:0 4px 14px rgba(0,0,0,.06);
+    }
+    .panel-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 10px;
+      border:1px solid #ddd;
+      border-radius:999px;
+      background:#fafafa;
+      font-size:14px;
+      white-space:nowrap;
+    }
+    select, button{
+      font-size:14px;
+      padding:8px 10px;
+      border-radius:8px;
+      border:1px solid #ccc;
+      background:#fff;
+      cursor:pointer;
+    }
+    button{ background:#111; color:#fff; border-color:#111; }
+    button.secondary{ background:#fff; color:#111; border-color:#ccc; }
+    .hint{ margin-top:8px; font-size:13px; color:#555; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="board" id="board">
+
+      <!-- Packout (big left bar) -->
+      <a class="box packout" data-id="packout" href="machine.html?id=packout"
+         style="left:1.0%; top:4.0%; width:7.5%; height:92%;">
+        <span>Packout</span>
+      </a>
+
+      <!-- Vertical divider line right of Packout -->
+      <div class="vline" style="left:15.5%;"></div>
+
+      <!-- Top row -->
+      <a class="box" data-id="2699" href="machine.html?id=2699"
+         style="left:19.5%; top:6.5%; width:7.5%; height:8.5%;">2699</a>
+
+      <a class="box" data-id="broach1" href="machine.html?id=broach1"
+         style="left:27.2%; top:6.5%; width:7.5%; height:8.5%;">Broach 1</a>
+
+      <a class="box" data-id="adcole" href="machine.html?id=adcole"
+         style="left:48.5%; top:6.5%; width:7.5%; height:8.5%;">Adcole</a>
+
+      <a class="box" data-id="2958" href="machine.html?id=2958"
+         style="left:78.0%; top:3.8%; width:8.8%; height:13.5%;">2958</a>
+
+      <!-- Upper-mid row -->
+      <a class="box" data-id="2985" href="machine.html?id=2985"
+         style="left:19.5%; top:21.0%; width:7.5%; height:9.0%;">2985</a>
+
+      <a class="box" data-id="2984" href="machine.html?id=2984"
+         style="left:27.2%; top:21.0%; width:7.5%; height:9.0%;">2984</a>
+
+      <a class="box" data-id="2782" href="machine.html?id=2782"
+         style="left:34.9%; top:21.0%; width:7.5%; height:9.0%;">2782</a>
+
+      <!-- Right top-mid -->
+      <a class="box" data-id="3068" href="machine.html?id=3068"
+         style="left:69.0%; top:15.5%; width:7.5%; height:14.0%;">3068</a>
+
+      <a class="box" data-id="3009" href="machine.html?id=3009"
+         style="left:88.0%; top:18.5%; width:7.5%; height:14.0%;">3009</a>
+
+      <!-- Middle machines -->
+      <a class="box" data-id="blohm2" href="machine.html?id=blohm2"
+         style="left:19.5%; top:46.0%; width:7.5%; height:10.5%;">Blohm 2</a>
+
+      <a class="box" data-id="blohm1" href="machine.html?id=blohm1"
+         style="left:19.5%; top:59.0%; width:7.5%; height:10.5%;">Blohm 1</a>
+
+      <a class="box" data-id="3002" href="machine.html?id=3002"
+         style="left:30.2%; top:45.0%; width:7.5%; height:25.0%;">3002</a>
+
+      <a class="box" data-id="gardner" href="machine.html?id=gardner"
+         style="left:58.2%; top:44.0%; width:7.5%; height:28.5%;">Gardner</a>
+
+      <a class="box" data-id="gardner-baby" href="machine.html?id=gardner-baby"
+         style="left:69.8%; top:52.0%; width:7.5%; height:16.0%;">Gardner<br>(Baby)</a>
+
+      <!-- Thick mid divider lines -->
+      <div class="hline" style="left:15.5%; right:48.5%; top:72.5%;"></div>
+      <div class="hline" style="left:54.5%; right:6.0%;  top:72.5%;"></div>
+
+      <!-- Lower section -->
+      <a class="box" data-id="3015" href="machine.html?id=3015"
+         style="left:19.5%; top:77.5%; width:7.5%; height:10.5%;">3015</a>
+
+      <a class="box" data-id="mapro" href="machine.html?id=mapro"
+         style="left:35.5%; top:77.5%; width:40.0%; height:10.5%;">Mapro</a>
+
+      <a class="box" data-id="cts" href="machine.html?id=cts"
+         style="left:73.2%; top:86.2%; width:16.0%; height:8.8%;">CTS</a>
+
+      <!-- Bottom row -->
+      <a class="box" data-id="2712" href="machine.html?id=2712"
+         style="left:13.0%; bottom:2.0%; width:7.5%; height:9.5%;">2712</a>
+
+      <a class="box" data-id="2965" href="machine.html?id=2965"
+         style="left:27.5%; bottom:2.0%; width:7.5%; height:9.5%;">2965</a>
+
+      <a class="box" data-id="pump1" href="machine.html?id=pump1"
+         style="left:42.0%; bottom:2.0%; width:24.0%; height:9.5%;">Pump 1</a>
+
+      <a class="box" data-id="pump2" href="machine.html?id=pump2"
+         style="left:74.5%; bottom:2.0%; width:24.0%; height:9.5%;">Pump 2</a>
+
+    </div>
+
+    <div class="panel">
+      <div class="panel-row">
+        <div class="pill">
+          <strong>Selected:</strong>
+          <span id="selectedLabel">None</span>
+        </div>
+
+        <div class="pill">
+          <strong>Status:</strong>
+          <select id="statusSelect" disabled>
+            <option value="running">Running (green)</option>
+            <option value="problems">Problems (yellow)</option>
+            <option value="down">Down (red)</option>
+            <option value="no_operator">No Operator (blue)</option>
+          </select>
+          <button id="applyBtn" disabled>Apply</button>
+          <button class="secondary" id="clearBtn">Clear selection</button>
+        </div>
+
+        <div class="pill">
+          <label style="display:flex; gap:8px; align-items:center;">
+            <input type="checkbox" id="editMode" />
+            <strong>Edit colors mode</strong>
+          </label>
+        </div>
+      </div>
+
+      <div class="hint">
+        Edit colors mode ON = click selects a box (no navigation). OFF = click opens machine page.
+        (Edit mode is remembered.) Auto-loads <b>plant-data.json</b> when started via the BAT/localhost.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STATUS_STATE_KEY = "machineStatusState";
+    const STATUS_LOG_KEY   = "machineStatusLog";
+
+    const STATUS_CLASS = {
+      running:  'status-running',
+      problems: 'status-problems',
+      down:     'status-down',
+      no_operator: 'status-no_operator'
+    };
+
+    function nowMs(){ return Date.now(); }
+    function loadJson(key, fallback){
+      try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); }
+      catch { return fallback; }
+    }
+    function saveJson(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+
+    function ensureMachineState(id){
+      const all = loadJson(STATUS_STATE_KEY, {});
+      if (!all[id]){
+        all[id] = { status: "running", since: nowMs() };
+        saveJson(STATUS_STATE_KEY, all);
+      }
+      return all[id];
+    }
+
+    function appendStatusLog(id, from, to){
+      const logs = loadJson(STATUS_LOG_KEY, {});
+      if (!logs[id]) logs[id] = [];
+      logs[id].push({ ts: new Date().toISOString(), from, to });
+      saveJson(STATUS_LOG_KEY, logs);
+    }
+
+    function applyStatusToElement(el, status){
+      Object.values(STATUS_CLASS).forEach(c => el.classList.remove(c));
+      el.classList.add(STATUS_CLASS[status] || STATUS_CLASS.running);
+    }
+
+    function getCurrentStatus(id){
+      const all = loadJson(STATUS_STATE_KEY, {});
+      return (all[id]?.status || "running").toLowerCase();
+    }
+
+    function setMachineStatus(id, newStatus){
+      const all = loadJson(STATUS_STATE_KEY, {});
+      const st = all[id] || { status: "running", since: nowMs() };
+
+      const oldStatus = (st.status || "running").toLowerCase();
+      newStatus = (newStatus || "running").toLowerCase();
+
+      const allowed = ["running","problems","down","no_operator"];
+      if (!allowed.includes(newStatus)) newStatus = "running";
+
+      if (oldStatus !== newStatus){
+        st.status = newStatus;
+        st.since = nowMs();
+        appendStatusLog(id, oldStatus, newStatus);
+      }
+
+      all[id] = st;
+      saveJson(STATUS_STATE_KEY, all);
+    }
+
+    function loadStatusesToBoard(){
+      document.querySelectorAll('.box[data-id]').forEach(el => {
+        const id = el.dataset.id;
+        ensureMachineState(id);
+        applyStatusToElement(el, getCurrentStatus(id));
+      });
+    }
+
+    // ----- Option A auto-load from plant-data.json (localhost only) -----
+    function applyAllDataImport(payload){
+      if (!payload || typeof payload !== "object") throw new Error("Invalid file (not an object).");
+      if (!payload.localStorage || typeof payload.localStorage !== "object") throw new Error("Invalid file (missing localStorage).");
+
+      const toRemove = [];
+      for (let i=0; i<localStorage.length; i++){
+        const k = localStorage.key(i);
+        if (!k) continue;
+        const owned =
+          k === STATUS_STATE_KEY ||
+          k === STATUS_LOG_KEY ||
+          k === "editMode" ||
+          k.startsWith("machineProjectHistory:") ||
+          k.startsWith("machineProductionHistory:");
+        if (owned) toRemove.push(k);
+      }
+      toRemove.forEach(k => localStorage.removeItem(k));
+
+      Object.entries(payload.localStorage).forEach(([k,v]) => {
+        if (typeof v === "string") localStorage.setItem(k, v);
+      });
+    }
+
+    async function autoLoadPlantData(){
+      try{
+        const res = await fetch(`plant-data.json?cb=${Date.now()}`, { cache:"no-store" });
+        if (!res.ok) return;
+        const payload = await res.json();
+        applyAllDataImport(payload);
+      }catch{
+        // ignore (not running via localhost or file not present)
+      }
+    }
+
+    // ----- panel selection/edit-mode -----
+    const editMode = document.getElementById('editMode');
+    const selectedLabel = document.getElementById('selectedLabel');
+    const statusSelect  = document.getElementById('statusSelect');
+    const applyBtn      = document.getElementById('applyBtn');
+    const clearBtn      = document.getElementById('clearBtn');
+
+    const savedEditMode = localStorage.getItem('editMode');
+    editMode.checked = savedEditMode ? (savedEditMode === 'true') : true;
+
+    editMode.addEventListener('change', () => {
+      localStorage.setItem('editMode', String(editMode.checked));
+      if (!editMode.checked) setSelected(null);
+    });
+
+    let selectedBox = null;
+
+    function setSelected(el){
+      document.querySelectorAll('.box.selected').forEach(b => b.classList.remove('selected'));
+      selectedBox = el;
+
+      if (!el){
+        selectedLabel.textContent = "None";
+        statusSelect.disabled = true;
+        applyBtn.disabled = true;
+        return;
+      }
+
+      el.classList.add('selected');
+      const id = el.dataset.id;
+      selectedLabel.textContent = id || el.textContent.trim();
+      statusSelect.disabled = false;
+      applyBtn.disabled = false;
+      statusSelect.value = getCurrentStatus(id);
+    }
+
+    function applySelectedStatus(){
+      if (!selectedBox) return;
+      const id = selectedBox.dataset.id;
+      const val = statusSelect.value;
+
+      setMachineStatus(id, val);
+      applyStatusToElement(selectedBox, getCurrentStatus(id));
+    }
+
+    document.querySelectorAll('.box[data-id]').forEach(el => {
+      el.addEventListener('click', (e) => {
+        if (editMode.checked){
+          e.preventDefault();
+          setSelected(el);
+        }
+      });
+    });
+
+    applyBtn.addEventListener('click', applySelectedStatus);
+    clearBtn.addEventListener('click', () => setSelected(null));
+
+    (async () => {
+      await autoLoadPlantData();
+
+      // re-apply imported editMode if present
+      const importedEditMode = localStorage.getItem('editMode');
+      if (importedEditMode !== null) editMode.checked = (importedEditMode === "true");
+
+      loadStatusesToBoard();
+    })();
+  </script>
+</body>
+</html>
