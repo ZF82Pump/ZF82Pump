@@ -305,7 +305,7 @@
    ***********************/
   const SUPABASE_URL = "https://vycwkgpdivxazjgsrgiq.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_aAjs8tF_8c8sB30ekxSXZQ_KxaBMBTE";
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); // docs pattern :contentReference[oaicite:2]{index=2}
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); // docs pattern :contentReference[oaicite:2]{index=2}
 
   /***********************
    *  MACHINE IDS (from layout)
@@ -361,7 +361,7 @@
    *  SUPABASE: Ensure machine rows exist (insert missing only)
    ***********************/
   async function ensureMachinesExist(){
-    const { data, error } = await supabase
+    const { data, error } = await sb
       .from("machines")
       .select("id")
       .in("id", MACHINE_IDS);
@@ -373,13 +373,13 @@
 
     if (missing.length){
       const rows = missing.map(id => ({ id, status: "running", status_since: new Date().toISOString() }));
-      const ins = await supabase.from("machines").insert(rows);
+      const ins = await sb.from("machines").insert(rows);
       if (ins.error) throw ins.error;
     }
   }
 
   async function fetchMachines(){
-    const { data, error } = await supabase
+    const { data, error } = await sb
       .from("machines")
       .select("id,status,status_since")
       .in("id", MACHINE_IDS);
@@ -392,7 +392,7 @@
 
   async function updateMachineStatus(id, toStatus){
     // read current to log from_status
-    const { data: cur, error: curErr } = await supabase
+    const { data: cur, error: curErr } = await sb
       .from("machines")
       .select("status")
       .eq("id", id)
@@ -402,14 +402,14 @@
 
     const nowIso = new Date().toISOString();
 
-    const up = await supabase
+    const up = await sb
       .from("machines")
       .update({ status: toStatus, status_since: nowIso })
       .eq("id", id);
     if (up.error) throw up.error;
 
     // status log
-    const log = await supabase
+    const log = await sb
       .from("status_log")
       .insert([{ machine_id: id, changed_at: nowIso, from_status: fromStatus, to_status: toStatus }]);
     if (log.error) throw log.error;
@@ -419,7 +419,7 @@
    *  PACKOUT BADGE (goal + rollups)
    ***********************/
   async function fetchPackoutGoal(){
-    const { data, error } = await supabase
+    const { data, error } = await sb
       .from("packout_goal")
       .select("ytd_goal")
       .eq("id", 1)
@@ -429,7 +429,7 @@
   }
 
   async function fetchPackoutProduction(fromDateISO){
-    const { data, error } = await supabase
+    const { data, error } = await sb
       .from("production_entries")
       .select("prod_date,parts_ran")
       .eq("machine_id", "packout")
@@ -563,7 +563,7 @@
   async function refreshSelectedStatus(){
     if(!selected) return;
     const id = selected.dataset.id;
-    const { data, error } = await supabase.from("machines").select("status").eq("id", id).maybeSingle();
+    const { data, error } = await sb.from("machines").select("status").eq("id", id).maybeSingle();
     if(!error){
       statusSelect.value = (data?.status || "running").toLowerCase();
     }
@@ -606,3 +606,4 @@
 </script>
 </body>
 </html>
+
