@@ -1,245 +1,257 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Admin</title>
+  <meta charset="utf-8">
+  <title>Admin Panel</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+
   <style>
-    body{ font-family: Arial, Helvetica, sans-serif; margin:0; background:#f6f6f6; }
-    .wrap{ max-width:1100px; margin:24px auto; padding:0 16px; }
-    .top{
-      display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between;
-      gap:10px; margin-bottom:12px;
+    body{
+      font-family: Arial, Helvetica, sans-serif;
+      background:#f6f6f6;
+      margin:0;
+      padding:0;
     }
+    .wrap{
+      max-width:1100px;
+      margin:30px auto;
+      padding:0 16px;
+    }
+    h1{ margin:0 0 10px; }
+    .muted{ color:#555; font-size:13px; margin-bottom:16px; }
+
     .card{
-      background:#fff; border:1px solid #ddd; border-radius:12px;
-      padding:16px; box-shadow:0 6px 18px rgba(0,0,0,.06);
-      margin-bottom:12px;
+      background:#fff;
+      border:1px solid #ddd;
+      border-radius:12px;
+      padding:16px;
+      margin-bottom:16px;
+      box-shadow:0 6px 18px rgba(0,0,0,.06);
     }
-    h1{ margin:0; font-size:22px; }
-    .muted{ color:#666; margin:4px 0 0; }
-    a{ color:#1a73e8; text-decoration:none; }
+
+    label{
+      display:block;
+      font-size:13px;
+      margin-bottom:6px;
+    }
+
+    select, input{
+      padding:8px 10px;
+      font-size:14px;
+      border-radius:8px;
+      border:1px solid #ccc;
+      width:100%;
+      box-sizing:border-box;
+    }
+
     button{
-      padding:10px 12px;
+      padding:10px 14px;
+      font-size:14px;
       border-radius:10px;
       border:1px solid #111;
       background:#111;
       color:#fff;
       cursor:pointer;
-      font-size:14px;
+      margin-right:8px;
+      margin-top:10px;
     }
-    button.secondary{ background:#fff; color:#111; border-color:#ccc; }
-    .row{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
-    select, input[type="file"]{
-      font-size:14px; padding:10px; border-radius:10px; border:1px solid #ccc; background:#fff;
+    button.secondary{
+      background:#fff;
+      color:#111;
+      border-color:#ccc;
     }
-    .note{ color:#555; font-size:13px; margin-top:8px; }
+
+    .row{
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
     .pill{
-      display:inline-flex; align-items:center; gap:8px;
-      padding:8px 10px; border:1px solid #ddd; border-radius:999px;
-      background:#fafafa; font-size:13px; white-space:nowrap;
+      display:inline-block;
+      font-size:12px;
+      padding:6px 10px;
+      border:1px solid #ddd;
+      border-radius:999px;
+      background:#fafafa;
+      margin-top:8px;
     }
+
+    a{ color:#1a73e8; text-decoration:none; }
   </style>
 </head>
+
 <body>
-  <div class="wrap">
-    <div class="top">
-      <div>
-        <h1>Admin</h1>
-        <div class="muted">Export/import all data + download status logs.</div>
-      </div>
-      <div class="row">
-        <a href="index.html">← Back to layout</a>
-      </div>
-    </div>
+<div class="wrap">
 
-    <div class="card">
-      <h3 style="margin:0 0 10px;">Export / Import (ALL machines)</h3>
-      <div class="row">
-        <button id="exportAllBtn">Export ALL data (.json)</button>
+  <h1>Admin Panel</h1>
+  <div class="muted">Export / Import shared data and download status logs.</div>
 
-        <button class="secondary" id="importAllBtn">Import ALL data (.json)</button>
-        <input id="importFile" type="file" accept="application/json" style="display:none" />
-      </div>
-      <div class="note">
-        This includes: statuses, status logs, project histories, production histories, and your edit-mode preference.
-      </div>
-    </div>
-
-    <div class="card">
-      <h3 style="margin:0 0 10px;">Status Change Logs (TXT)</h3>
-      <div class="row">
-        <button id="downloadAllLogsBtn">Download ALL machines log (.txt)</button>
-      </div>
-
-      <div style="height:10px"></div>
-
-      <div class="row">
-        <span class="pill"><strong>Machine:</strong></span>
-        <select id="machineSelect"></select>
-        <button class="secondary" id="downloadOneLogBtn">Download selected machine log (.txt)</button>
-      </div>
-    </div>
+  <div class="card">
+    <label for="machineSelect"><strong>Select machine (for logs)</strong></label>
+    <select id="machineSelect">
+      <option value="ALL">All machines</option>
+    </select>
   </div>
 
-  <script>
-    const STATUS_STATE_KEY = "machineStatusState";
-    const STATUS_LOG_KEY   = "machineStatusLog";
+  <div class="card">
+    <h3>Export / Import</h3>
+    <div class="row">
+      <button id="exportBtn">Export ALL data</button>
+      <input type="file" id="importFile" accept=".json">
+      <button id="importBtn" class="secondary">Import data</button>
+    </div>
+    <div class="pill" id="exportStatus">Idle</div>
+  </div>
 
-    const MACHINE_IDS = [
-      "packout","2699","broach1","adcole","2958","2985","2984","2782","3068","3009",
-      "blohm2","blohm1","3002","gardner","gardner-baby","3015","mapro","cts","2712","2965","pump1","pump2"
-    ];
+  <div class="card">
+    <h3>Status Change Logs</h3>
+    <button id="downloadLogBtn">Download status log</button>
+    <div class="pill" id="logStatus">Idle</div>
+  </div>
 
-    const DISPLAY_NAMES = {
-      "packout":"Packout","2699":"2699","broach1":"Broach 1","adcole":"Adcole","2958":"2958",
-      "2985":"2985","2984":"2984","2782":"2782","3068":"3068","3009":"3009",
-      "blohm2":"Blohm 2","blohm1":"Blohm 1","3002":"3002","gardner":"Gardner","gardner-baby":"Gardner (Baby)",
-      "3015":"3015","mapro":"Mapro","cts":"CTS","2712":"2712","2965":"2965","pump1":"Pump 1","pump2":"Pump 2"
-    };
+  <div class="card">
+    <a href="index.html">← Back to layout</a>
+  </div>
 
-    function downloadFile(filename, blob){
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+</div>
+
+<!-- Supabase CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+/* ================================
+   SUPABASE CONFIG — REQUIRED
+   (must match index.html + machine.html)
+================================ */
+const SUPABASE_URL = "https://vycwkgpdivxazjgsrgiq.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_aAjs8tF_8c8sB30ekxSXZQ_KxaBMBTE";
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/* ================================
+   MACHINE IDS (same list as layout)
+================================ */
+const MACHINE_IDS = [
+  "packout","2699","broach1","adcole","2958","2985","2984","2782","3068","3009",
+  "blohm2","blohm1","3002","gardner","gardner-baby","3015","mapro","cts",
+  "2712","2965","pump1","pump2"
+];
+
+const machineSelect = document.getElementById("machineSelect");
+const exportStatus = document.getElementById("exportStatus");
+const logStatus = document.getElementById("logStatus");
+
+MACHINE_IDS.forEach(id=>{
+  const o=document.createElement("option");
+  o.value=id;
+  o.textContent=id;
+  machineSelect.appendChild(o);
+});
+
+/* ================================
+   EXPORT ALL DATA
+================================ */
+document.getElementById("exportBtn").onclick = async ()=>{
+  exportStatus.textContent = "Exporting…";
+
+  const tables = [
+    "machines",
+    "project_entries",
+    "production_entries",
+    "status_log",
+    "packout_goal"
+  ];
+
+  const out = {};
+  for (const t of tables){
+    const { data, error } = await supabase.from(t).select("*");
+    if (error){
+      alert("Export failed: " + error.message);
+      exportStatus.textContent = "Error";
+      return;
     }
+    out[t] = data;
+  }
 
-    function buildAllDataExport(){
-      const out = { version: 1, exportedAt: new Date().toISOString(), app: "plant-layout-local", localStorage: {} };
+  const blob = new Blob([JSON.stringify(out,null,2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "ZF82_export.json";
+  a.click();
 
-      const keys = [];
-      for (let i=0; i<localStorage.length; i++){
-        const k = localStorage.key(i);
-        if (!k) continue;
+  exportStatus.textContent = "Export complete";
+};
 
-        const owned =
-          k === STATUS_STATE_KEY ||
-          k === STATUS_LOG_KEY ||
-          k === "editMode" ||
-          k.startsWith("machineProjectHistory:") ||
-          k.startsWith("machineProductionHistory:");
+/* ================================
+   IMPORT DATA
+================================ */
+document.getElementById("importBtn").onclick = async ()=>{
+  const file = document.getElementById("importFile").files[0];
+  if (!file) return alert("Select a JSON file first.");
 
-        if (owned) keys.push(k);
-      }
+  if (!confirm("This will INSERT rows into the database. Continue?")) return;
 
-      keys.forEach(k => { out.localStorage[k] = localStorage.getItem(k); });
-      return out;
+  exportStatus.textContent = "Importing…";
+
+  const text = await file.text();
+  const data = JSON.parse(text);
+
+  for (const table of Object.keys(data)){
+    if (!Array.isArray(data[table])) continue;
+    if (!data[table].length) continue;
+
+    const { error } = await supabase.from(table).insert(data[table]);
+    if (error){
+      alert("Import error in " + table + ": " + error.message);
+      exportStatus.textContent = "Error";
+      return;
     }
+  }
 
-    function applyAllDataImport(payload){
-      if (!payload || typeof payload !== "object") throw new Error("Invalid file (not an object).");
-      if (!payload.localStorage || typeof payload.localStorage !== "object") throw new Error("Invalid file (missing localStorage).");
+  exportStatus.textContent = "Import complete";
+};
 
-      const toRemove = [];
-      for (let i=0; i<localStorage.length; i++){
-        const k = localStorage.key(i);
-        if (!k) continue;
+/* ================================
+   DOWNLOAD STATUS LOG
+================================ */
+document.getElementById("downloadLogBtn").onclick = async ()=>{
+  logStatus.textContent = "Preparing log…";
+  const sel = machineSelect.value;
 
-        const owned =
-          k === STATUS_STATE_KEY ||
-          k === STATUS_LOG_KEY ||
-          k === "editMode" ||
-          k.startsWith("machineProjectHistory:") ||
-          k.startsWith("machineProductionHistory:");
+  let q = supabase.from("status_log").select("*").order("changed_at",{ascending:true});
+  if (sel !== "ALL") q = q.eq("machine_id", sel);
 
-        if (owned) toRemove.push(k);
-      }
-      toRemove.forEach(k => localStorage.removeItem(k));
+  const { data, error } = await q;
+  if (error){
+    alert("Log download failed: " + error.message);
+    logStatus.textContent = "Error";
+    return;
+  }
 
-      Object.entries(payload.localStorage).forEach(([k,v]) => {
-        if (typeof v === "string") localStorage.setItem(k, v);
-      });
-    }
+  const lines = data.map(r =>
+    `${r.changed_at} | ${r.machine_id} | ${r.from_status} -> ${r.to_status}`
+  ).join("\n");
 
-    document.getElementById("exportAllBtn").addEventListener("click", () => {
-      const data = buildAllDataExport();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-      downloadFile(`plant-data-${new Date().toISOString().replace(/[:.]/g,"-")}.json`, blob);
-    });
+  const blob = new Blob([lines], {type:"text/plain"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = sel==="ALL" ? "status_log_all.txt" : `status_log_${sel}.txt`;
+  a.click();
 
-    const importFile = document.getElementById("importFile");
-    document.getElementById("importAllBtn").addEventListener("click", () => {
-      importFile.value = "";
-      importFile.click();
-    });
-    importFile.addEventListener("change", async () => {
-      const file = importFile.files && importFile.files[0];
-      if (!file) return;
+  logStatus.textContent = "Log downloaded";
+};
 
-      try{
-        const text = await file.text();
-        const payload = JSON.parse(text);
-        applyAllDataImport(payload);
-        alert("Import complete.");
-      }catch(err){
-        alert("Import failed: " + (err?.message || String(err)));
-      }
-    });
-
-    function getAllLogs(){
-      try { return JSON.parse(localStorage.getItem(STATUS_LOG_KEY) || "{}"); }
-      catch { return {}; }
-    }
-
-    function machineLogLines(machineId){
-      const logsAll = getAllLogs();
-      const logs = logsAll[machineId] || [];
-
-      const lines = [];
-      lines.push(`Machine: ${DISPLAY_NAMES[machineId] || machineId} (${machineId})`);
-      lines.push(`Generated: ${new Date().toLocaleString()}`);
-      lines.push("");
-      lines.push("Status Change Log:");
-      lines.push("------------------");
-
-      if (!logs.length){
-        lines.push("No status changes recorded.");
-        return lines;
-      }
-
-      logs.forEach(e => {
-        const dt = new Date(e.ts);
-        const ts = isNaN(dt.getTime()) ? e.ts : dt.toLocaleString();
-        lines.push(`${ts}  |  ${e.from}  ->  ${e.to}`);
-      });
-      return lines;
-    }
-
-    document.getElementById("downloadAllLogsBtn").addEventListener("click", () => {
-      const lines = [];
-      lines.push(`ALL MACHINES STATUS LOG`);
-      lines.push(`Generated: ${new Date().toLocaleString()}`);
-      lines.push("");
-
-      MACHINE_IDS.forEach(id => {
-        lines.push(...machineLogLines(id));
-        lines.push("");
-        lines.push("");
-      });
-
-      downloadFile(`all-machines-status-log.txt`, new Blob([lines.join("\n")], {type:"text/plain"}));
-    });
-
-    // Dropdown is already implemented
-    const machineSelect = document.getElementById("machineSelect");
-    MACHINE_IDS.forEach(id => {
-      const opt = document.createElement("option");
-      opt.value = id;
-      opt.textContent = DISPLAY_NAMES[id] || id;
-      machineSelect.appendChild(opt);
-    });
-
-    document.getElementById("downloadOneLogBtn").addEventListener("click", () => {
-      const id = machineSelect.value;
-      const safe = id.replace(/[^a-z0-9_\-]/gi, "_");
-      const lines = machineLogLines(id);
-      downloadFile(`${safe}-status-log.txt`, new Blob([lines.join("\n")], {type:"text/plain"}));
-    });
-  </script>
+/* ================================
+   PASSWORD GATE (ZF135)
+================================ */
+(function(){
+  const pw = prompt("Enter admin password:");
+  if (pw !== "ZF135") {
+    alert("Access denied");
+    location.href = "index.html";
+  }
+})();
+</script>
 </body>
 </html>
