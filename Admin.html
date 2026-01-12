@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin</title>
+  <style>
+    body{ font-family: Arial, Helvetica, sans-serif; margin:0; background:#f6f6f6; }
+    .wrap{ max-width:1100px; margin:24px auto; padding:0 16px; }
+    .top{
+      display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between;
+      gap:10px; margin-bottom:12px;
+    }
+    .card{
+      background:#fff; border:1px solid #ddd; border-radius:12px;
+      padding:16px; box-shadow:0 6px 18px rgba(0,0,0,.06);
+      margin-bottom:12px;
+    }
+    h1{ margin:0; font-size:22px; }
+    .muted{ color:#666; margin:4px 0 0; }
+    a{ color:#1a73e8; text-decoration:none; }
+    button{
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid #111;
+      background:#111;
+      color:#fff;
+      cursor:pointer;
+      font-size:14px;
+    }
+    button.secondary{ background:#fff; color:#111; border-color:#ccc; }
+    .row{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+    select, input[type="file"]{
+      font-size:14px; padding:10px; border-radius:10px; border:1px solid #ccc; background:#fff;
+    }
+    .note{ color:#555; font-size:13px; margin-top:8px; }
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 10px; border:1px solid #ddd; border-radius:999px;
+      background:#fafafa; font-size:13px; white-space:nowrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <h1>Admin</h1>
+        <div class="muted">Export/import all data + download status logs.</div>
+      </div>
+      <div class="row">
+        <a href="index.html">← Back to layout</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 10px;">Export / Import (ALL machines)</h3>
+      <div class="row">
+        <button id="exportAllBtn">Export ALL data (.json)</button>
+
+        <button class="secondary" id="importAllBtn">Import ALL data (.json)</button>
+        <input id="importFile" type="file" accept="application/json" style="display:none" />
+      </div>
+      <div class="note">
+        This includes: statuses, status logs, project histories, production histories, and your edit-mode preference.
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:0 0 10px;">Status Change Logs (TXT)</h3>
+      <div class="row">
+        <button id="downloadAllLogsBtn">Download ALL machines log (.txt)</button>
+      </div>
+
+      <div style="height:10px"></div>
+
+      <div class="row">
+        <span class="pill"><strong>Machine:</strong></span>
+        <select id="machineSelect"></select>
+        <button class="secondary" id="downloadOneLogBtn">Download selected machine log (.txt)</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STATUS_STATE_KEY = "machineStatusState";
+    const STATUS_LOG_KEY   = "machineStatusLog";
+
+    const MACHINE_IDS = [
+      "packout","2699","broach1","adcole","2958","2985","2984","2782","3068","3009",
+      "blohm2","blohm1","3002","gardner","gardner-baby","3015","mapro","cts","2712","2965","pump1","pump2"
+    ];
+
+    const DISPLAY_NAMES = {
+      "packout":"Packout","2699":"2699","broach1":"Broach 1","adcole":"Adcole","2958":"2958",
+      "2985":"2985","2984":"2984","2782":"2782","3068":"3068","3009":"3009",
+      "blohm2":"Blohm 2","blohm1":"Blohm 1","3002":"3002","gardner":"Gardner","gardner-baby":"Gardner (Baby)",
+      "3015":"3015","mapro":"Mapro","cts":"CTS","2712":"2712","2965":"2965","pump1":"Pump 1","pump2":"Pump 2"
+    };
+
+    function downloadFile(filename, blob){
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function buildAllDataExport(){
+      const out = { version: 1, exportedAt: new Date().toISOString(), app: "plant-layout-local", localStorage: {} };
+
+      const keys = [];
+      for (let i=0; i<localStorage.length; i++){
+        const k = localStorage.key(i);
+        if (!k) continue;
+
+        const owned =
+          k === STATUS_STATE_KEY ||
+          k === STATUS_LOG_KEY ||
+          k === "editMode" ||
+          k.startsWith("machineProjectHistory:") ||
+          k.startsWith("machineProductionHistory:");
+
+        if (owned) keys.push(k);
+      }
+
+      keys.forEach(k => { out.localStorage[k] = localStorage.getItem(k); });
+      return out;
+    }
+
+    function applyAllDataImport(payload){
+      if (!payload || typeof payload !== "object") throw new Error("Invalid file (not an object).");
+      if (!payload.localStorage || typeof payload.localStorage !== "object") throw new Error("Invalid file (missing localStorage).");
+
+      const toRemove = [];
+      for (let i=0; i<localStorage.length; i++){
+        const k = localStorage.key(i);
+        if (!k) continue;
+
+        const owned =
+          k === STATUS_STATE_KEY ||
+          k === STATUS_LOG_KEY ||
+          k === "editMode" ||
+          k.startsWith("machineProjectHistory:") ||
+          k.startsWith("machineProductionHistory:");
+
+        if (owned) toRemove.push(k);
+      }
+      toRemove.forEach(k => localStorage.removeItem(k));
+
+      Object.entries(payload.localStorage).forEach(([k,v]) => {
+        if (typeof v === "string") localStorage.setItem(k, v);
+      });
+    }
+
+    document.getElementById("exportAllBtn").addEventListener("click", () => {
+      const data = buildAllDataExport();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      downloadFile(`plant-data-${new Date().toISOString().replace(/[:.]/g,"-")}.json`, blob);
+    });
+
+    const importFile = document.getElementById("importFile");
+    document.getElementById("importAllBtn").addEventListener("click", () => {
+      importFile.value = "";
+      importFile.click();
+    });
+    importFile.addEventListener("change", async () => {
+      const file = importFile.files && importFile.files[0];
+      if (!file) return;
+
+      try{
+        const text = await file.text();
+        const payload = JSON.parse(text);
+        applyAllDataImport(payload);
+        alert("Import complete.");
+      }catch(err){
+        alert("Import failed: " + (err?.message || String(err)));
+      }
+    });
+
+    function getAllLogs(){
+      try { return JSON.parse(localStorage.getItem(STATUS_LOG_KEY) || "{}"); }
+      catch { return {}; }
+    }
+
+    function machineLogLines(machineId){
+      const logsAll = getAllLogs();
+      const logs = logsAll[machineId] || [];
+
+      const lines = [];
+      lines.push(`Machine: ${DISPLAY_NAMES[machineId] || machineId} (${machineId})`);
+      lines.push(`Generated: ${new Date().toLocaleString()}`);
+      lines.push("");
+      lines.push("Status Change Log:");
+      lines.push("------------------");
+
+      if (!logs.length){
+        lines.push("No status changes recorded.");
+        return lines;
+      }
+
+      logs.forEach(e => {
+        const dt = new Date(e.ts);
+        const ts = isNaN(dt.getTime()) ? e.ts : dt.toLocaleString();
+        lines.push(`${ts}  |  ${e.from}  ->  ${e.to}`);
+      });
+      return lines;
+    }
+
+    document.getElementById("downloadAllLogsBtn").addEventListener("click", () => {
+      const lines = [];
+      lines.push(`ALL MACHINES STATUS LOG`);
+      lines.push(`Generated: ${new Date().toLocaleString()}`);
+      lines.push("");
+
+      MACHINE_IDS.forEach(id => {
+        lines.push(...machineLogLines(id));
+        lines.push("");
+        lines.push("");
+      });
+
+      downloadFile(`all-machines-status-log.txt`, new Blob([lines.join("\n")], {type:"text/plain"}));
+    });
+
+    // Dropdown is already implemented
+    const machineSelect = document.getElementById("machineSelect");
+    MACHINE_IDS.forEach(id => {
+      const opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = DISPLAY_NAMES[id] || id;
+      machineSelect.appendChild(opt);
+    });
+
+    document.getElementById("downloadOneLogBtn").addEventListener("click", () => {
+      const id = machineSelect.value;
+      const safe = id.replace(/[^a-z0-9_\-]/gi, "_");
+      const lines = machineLogLines(id);
+      downloadFile(`${safe}-status-log.txt`, new Blob([lines.join("\n")], {type:"text/plain"}));
+    });
+  </script>
+</body>
+</html>

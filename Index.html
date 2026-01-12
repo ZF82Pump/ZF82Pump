@@ -1,0 +1,476 @@
+<!-- ========================= index.html (FULL UPDATED) ========================= -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Assembly Line Layout</title>
+
+  <style>
+    :root{
+      --border: 2px solid #000;
+      --thin: 1px solid #000;
+      --bg: #ffffff;
+
+      --green: #10a44a;
+      --yellow:#ffd400;
+      --red:   #e01616;
+      --blue:  #1e63ff;
+    }
+
+    html, body { height:100%; }
+    body{
+      margin:0;
+      font-family: Arial, Helvetica, sans-serif;
+      background:#f6f6f6;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+    }
+
+    .wrap{
+      width: min(1850px, 98vw);
+      margin: 0 auto;
+      padding: 12px 12px 0;
+      box-sizing:border-box;
+      display:flex;
+      flex-direction:column;
+      height:100%;
+    }
+
+    .board{
+      position:relative;
+      width:100%;
+      flex: 1 1 auto;
+      aspect-ratio: 1828 / 661;
+      background:var(--bg);
+      border:var(--border);
+      box-shadow:0 8px 24px rgba(0,0,0,.08);
+      overflow:hidden;
+    }
+
+    /* Scale + lift everything EXCEPT bottom row */
+    .upper-layer{
+      position:absolute;
+      inset:0;
+      transform-origin: top left;
+      transform: translateY(-18px) scale(0.95);
+    }
+
+    .box{
+      position:absolute;
+      border:var(--thin);
+      background:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      font-size:20px;
+      padding:6px;
+      box-sizing:border-box;
+      text-decoration:none;
+      color:#000;
+      cursor:pointer;
+      user-select:none;
+      line-height:1.1;
+      transition: transform .06s ease, box-shadow .12s ease, outline .12s ease;
+    }
+
+    .box:hover{ box-shadow:0 3px 10px rgba(0,0,0,.12); transform: translateY(-1px); }
+    .box:active{ transform: translateY(0px); }
+
+    .status-running{ background:#10a44a; }
+    .status-problems{ background:#ffd400; }
+    .status-down{ background:#e01616; }
+    .status-no_operator{ background:#1e63ff; color:#fff; }
+
+    .selected{ outline: 3px solid #1a73e8; outline-offset: 2px; }
+
+    .vline{
+      position:absolute;
+      top:2%;
+      bottom:2%;
+      width:0;
+      border-left: 4px solid #000;
+    }
+
+    .hline{
+      position:absolute;
+      height:0;
+      border-top: 4px solid #000;
+    }
+
+    .packout span{
+      writing-mode: vertical-rl;
+      text-orientation: upright;
+      letter-spacing: 2px;
+      font-size:28px;
+      user-select:none;
+    }
+
+    .panel{
+      margin-top:10px;
+      background:#fff;
+      border:1px solid #ddd;
+      border-radius:10px;
+      padding:12px 14px;
+      box-shadow:0 4px 14px rgba(0,0,0,.06);
+    }
+
+    .panel-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 10px;
+      border:1px solid #ddd;
+      border-radius:999px;
+      background:#fafafa;
+      font-size:14px;
+      white-space:nowrap;
+    }
+
+    select, button{
+      font-size:14px;
+      padding:8px 10px;
+      border-radius:8px;
+      border:1px solid #ccc;
+      background:#fff;
+      cursor:pointer;
+    }
+
+    button{ background:#111; color:#fff; border-color:#111; }
+    button.secondary{ background:#fff; color:#111; border-color:#ccc; }
+
+    /* Packout badge (smaller / ~half width) */
+    .metric-badge{
+      position:absolute;
+      border:1px solid #000;
+      background:#fff;
+      border-radius:10px;
+      padding:8px 10px;
+      font-size:12px;
+      line-height:1.25;
+      box-shadow:0 4px 12px rgba(0,0,0,.10);
+      width: 120px;   /* ~half of old size */
+      box-sizing:border-box;
+    }
+    .metric-row{ display:flex; justify-content:space-between; gap:8px; }
+    .metric-row span{ white-space:nowrap; }
+  </style>
+</head>
+
+<body>
+<div class="wrap">
+
+  <div class="board">
+
+    <!-- UPPER LAYER (scaled) -->
+    <div class="upper-layer">
+
+      <a class="box packout" data-id="packout" href="machine.html?id=packout"
+         style="left:1%; top:4%; width:9%; height:87%;"><span>Packout</span></a>
+
+      <!-- Packout badge: under packout, smaller, moved down +5% -->
+      <div id="packoutBadge" class="metric-badge" style="left:1.0%; top:92%;">
+       <div style="font-weight:bold; margin-bottom:4px;">
+  Goal: <span id="packoutGoalHead">—</span>
+</div>
+        <div class="metric-row"><span>YTD</span><span id="packoutYTD">—</span></div>
+        <div class="metric-row"><span>MTD</span><span id="packoutMTD">—</span></div>
+        <div class="metric-row"><span>Today</span><span id="packoutToday">—</span></div>
+      </div>
+
+      <div class="vline" style="left:15.5%;"></div>
+
+      <a class="box" data-id="2699" href="machine.html?id=2699"
+         style="left:19.5%; top:6.5%; width:7.5%; height:8.5%;">2699</a>
+
+      <a class="box" data-id="broach1" href="machine.html?id=broach1"
+         style="left:27.2%; top:6.5%; width:7.5%; height:8.5%;">Broach 1</a>
+
+      <a class="box" data-id="adcole" href="machine.html?id=adcole"
+         style="left:48.5%; top:6.5%; width:7.5%; height:8.5%;">Adcole</a>
+
+      <a class="box" data-id="2958" href="machine.html?id=2958"
+         style="left:78.0%; top:4.0%; width:8.8%; height:13.5%;">2958</a>
+
+      <a class="box" data-id="2985" href="machine.html?id=2985"
+         style="left:19.5%; top:21.0%; width:7.5%; height:9.0%;">2985</a>
+
+      <a class="box" data-id="2984" href="machine.html?id=2984"
+         style="left:27.2%; top:21.0%; width:7.5%; height:9.0%;">2984</a>
+
+      <a class="box" data-id="2782" href="machine.html?id=2782"
+         style="left:34.9%; top:21.0%; width:7.5%; height:9.0%;">2782</a>
+
+      <a class="box" data-id="3068" href="machine.html?id=3068"
+         style="left:69.0%; top:15.5%; width:7.5%; height:14.0%;">3068</a>
+
+      <a class="box" data-id="3009" href="machine.html?id=3009"
+         style="left:88.0%; top:18.5%; width:7.5%; height:14.0%;">3009</a>
+
+      <a class="box" data-id="blohm2" href="machine.html?id=blohm2"
+         style="left:19.5%; top:46.0%; width:7.5%; height:10.5%;">Blohm 2</a>
+
+      <a class="box" data-id="blohm1" href="machine.html?id=blohm1"
+         style="left:19.5%; top:59.0%; width:7.5%; height:10.5%;">Blohm 1</a>
+
+      <a class="box" data-id="3002" href="machine.html?id=3002"
+         style="left:30.2%; top:45.0%; width:7.5%; height:25.0%;">3002</a>
+
+      <a class="box" data-id="gardner" href="machine.html?id=gardner"
+         style="left:58.2%; top:44.0%; width:7.5%; height:25.0%;">Gardner</a>
+
+      <a class="box" data-id="gardner-baby" href="machine.html?id=gardner-baby"
+         style="left:69.8%; top:52.0%; width:7.5%; height:16.0%;">Gardner<br>(Baby)</a>
+
+      <div class="hline" style="left:15.5%; right:48.5%; top:72.5%;"></div>
+      <div class="hline" style="left:54.5%; right:6.0%;  top:72.5%;"></div>
+
+      <a class="box" data-id="3015" href="machine.html?id=3015"
+         style="left:19.5%; top:77.5%; width:7.5%; height:10.5%;">3015</a>
+
+      <a class="box" data-id="mapro" href="machine.html?id=mapro"
+         style="left:35.5%; top:77.5%; width:40.0%; height:10.5%;">Mapro</a>
+
+      <a class="box" data-id="cts" href="machine.html?id=cts"
+         style="left:76.0%; top:86.2%; width:16.0%; height:8.8%;">CTS</a>
+
+    </div>
+
+    <!-- BOTTOM ROW (not scaled) -->
+    <a class="box" data-id="2712" href="machine.html?id=2712"
+       style="left:16.0%; bottom:2.0%; width:7.5%; height:9.5%;">2712</a>
+
+    <a class="box" data-id="2965" href="machine.html?id=2965"
+       style="left:27.5%; bottom:2.0%; width:7.5%; height:9.5%;">2965</a>
+
+    <a class="box" data-id="pump1" href="machine.html?id=pump1"
+       style="left:42.0%; bottom:2.0%; width:24.0%; height:9.5%;">Pump 1</a>
+
+    <a class="box" data-id="pump2" href="machine.html?id=pump2"
+       style="left:74.5%; bottom:2.0%; width:24.0%; height:9.5%;">Pump 2</a>
+
+  </div>
+
+  <div class="panel">
+    <div class="panel-row">
+
+      <div class="pill"><strong>Selected:</strong> <span id="selectedLabel">None</span></div>
+
+      <div class="pill">
+        <strong>Status:</strong>
+        <select id="statusSelect" disabled>
+          <option value="running">Running</option>
+          <option value="problems">Problems</option>
+          <option value="down">Down</option>
+          <option value="no_operator">No Operator</option>
+        </select>
+        <button id="applyBtn" disabled>Apply</button>
+        <button class="secondary" id="clearBtn">Clear</button>
+      </div>
+
+      <div class="pill">
+        <strong>Admin:</strong>
+        <button class="secondary" id="adminBtn">Open</button>
+      </div>
+
+      <div class="pill">
+        <label style="display:flex; gap:8px; align-items:center;">
+          <input type="checkbox" id="editMode" />
+          <strong>Edit colors mode</strong>
+        </label>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const STATUS_STATE_KEY = "machineStatusState";
+  const STATUS_LOG_KEY = "machineStatusLog";
+
+  // Packout goal stored here:
+  const PACKOUT_GOAL_KEY = "packoutYearGoal:v1";
+  // Packout production history lives here:
+  const PACKOUT_PROD_KEY = "machineProductionHistory:packout";
+
+  const STATUS_CLASS = {
+    running: 'status-running',
+    problems: 'status-problems',
+    down: 'status-down',
+    no_operator: 'status-no_operator'
+  };
+
+  function nowMs(){ return Date.now(); }
+  function loadJson(k,d){ try{ return JSON.parse(localStorage.getItem(k)) ?? d; }catch{ return d; } }
+  function saveJson(k,v){ localStorage.setItem(k,JSON.stringify(v)); }
+
+  function ensureMachine(id){
+    const all=loadJson(STATUS_STATE_KEY,{});
+    if(!all[id]){ all[id]={status:"running",since:nowMs()}; saveJson(STATUS_STATE_KEY,all); }
+    return all[id];
+  }
+
+  function applyStatus(el,s){
+    Object.values(STATUS_CLASS).forEach(c=>el.classList.remove(c));
+    el.classList.add(STATUS_CLASS[s]||STATUS_CLASS.running);
+  }
+
+  function getStatus(id){
+    const all=loadJson(STATUS_STATE_KEY,{});
+    return (all[id]?.status||"running").toLowerCase();
+  }
+
+  function setStatus(id,s){
+    const all=loadJson(STATUS_STATE_KEY,{});
+    const st=all[id]||{status:"running",since:nowMs()};
+    const old=st.status;
+    if(old!==s){
+      st.status=s; st.since=nowMs();
+      const logs=loadJson(STATUS_LOG_KEY,{});
+      logs[id]=logs[id]||[];
+      logs[id].push({ts:new Date().toISOString(),from:old,to:s});
+      saveJson(STATUS_LOG_KEY,logs);
+    }
+    all[id]=st; saveJson(STATUS_STATE_KEY,all);
+  }
+
+  function loadBoard(){
+    document.querySelectorAll('.box[data-id]').forEach(b=>{
+      ensureMachine(b.dataset.id);
+      applyStatus(b,getStatus(b.dataset.id));
+    });
+  }
+
+  // ---------- Packout metrics from production history ----------
+  function isoToday(){
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth()+1).padStart(2,"0");
+    const dd = String(d.getDate()).padStart(2,"0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  function safeNum(x){
+    const n = Number(String(x ?? "").trim());
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function loadPackoutYearGoal(){
+    const n = Number(localStorage.getItem(PACKOUT_GOAL_KEY) || 0);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function loadPackoutProdList(){
+    const arr = loadJson(PACKOUT_PROD_KEY, []);
+    return Array.isArray(arr) ? arr : [];
+  }
+
+  function calcPackoutFromProd(){
+    const prod = loadPackoutProdList();
+    const goalYTD = loadPackoutYearGoal();
+    const goalMTD = goalYTD > 0 ? (goalYTD / 12) : 0;
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth()+1;
+    const todayIso = isoToday();
+
+    let ytd = 0;
+    let mtd = 0;
+    let today = 0;
+
+    for (const e of prod){
+      const date = String(e.prodDate || "");
+      const parts = safeNum(e.partsRan);
+
+      if (date && date.slice(0,4) === String(year)){
+        ytd += parts;
+        const m = Number(date.slice(5,7));
+        if (m === month) mtd += parts;
+      }
+      if (date === todayIso){
+        today += parts;
+      }
+    }
+
+    return { ytd, mtd, today, goalYTD, goalMTD };
+  }
+
+  function fmtVs(actual, goal){
+    if (!goal || goal <= 0) return `${actual.toLocaleString()}`;
+    const pct = (actual / goal) * 100;
+    return `${actual.toLocaleString()} (${pct.toFixed(1)}%)`;
+  }
+
+ function renderPackoutBadge(){
+  const s = calcPackoutFromProd();
+
+  const headGoalEl = document.getElementById("packoutGoalHead");
+  const ytdEl = document.getElementById("packoutYTD");
+  const mtdEl = document.getElementById("packoutMTD");
+  const tEl   = document.getElementById("packoutToday");
+
+  if (headGoalEl){
+    headGoalEl.textContent = (s.goalYTD && s.goalYTD > 0) ? s.goalYTD.toLocaleString() : "—";
+  }
+
+  if (ytdEl) ytdEl.textContent = fmtVs(s.ytd, s.goalYTD);
+  if (mtdEl) mtdEl.textContent = fmtVs(s.mtd, s.goalMTD);
+  if (tEl)   tEl.textContent   = s.today.toLocaleString();
+}
+
+
+  // ---------- selection/edit mode ----------
+  const editMode=document.getElementById("editMode");
+  const statusSelect=document.getElementById("statusSelect");
+  const applyBtn=document.getElementById("applyBtn");
+  const clearBtn=document.getElementById("clearBtn");
+  const selectedLabel=document.getElementById("selectedLabel");
+  let selected=null;
+
+  editMode.checked=localStorage.getItem("editMode")!=="false";
+  editMode.onchange=()=>{ localStorage.setItem("editMode",editMode.checked); if(!editMode.checked) select(null); };
+
+  function select(el){
+    document.querySelectorAll(".selected").forEach(e=>e.classList.remove("selected"));
+    selected=el;
+    if(!el){ selectedLabel.textContent="None"; statusSelect.disabled=true; applyBtn.disabled=true; return; }
+    el.classList.add("selected");
+    selectedLabel.textContent=el.dataset.id;
+    statusSelect.value=getStatus(el.dataset.id);
+    statusSelect.disabled=false; applyBtn.disabled=false;
+  }
+
+  applyBtn.onclick=()=>{ if(selected){ setStatus(selected.dataset.id,statusSelect.value); applyStatus(selected,getStatus(selected.dataset.id)); }};
+  clearBtn.onclick=()=>select(null);
+
+  document.querySelectorAll('.box[data-id]').forEach(b=>{
+    b.onclick=e=>{ if(editMode.checked){ e.preventDefault(); select(b); }};
+  });
+
+  // Admin password
+  document.getElementById("adminBtn").onclick=()=>{
+    const pw=prompt("Enter admin password:");
+    if(pw==="ZF135") location.href="admin.html";
+    else if(pw!==null) alert("Incorrect password");
+  };
+
+  // Startup
+  loadBoard();
+  renderPackoutBadge();
+  setInterval(renderPackoutBadge, 2000);
+</script>
+
+</body>
+</html>
