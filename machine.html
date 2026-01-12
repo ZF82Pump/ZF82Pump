@@ -277,7 +277,7 @@
      ***********************/
     const SUPABASE_URL = "https://vycwkgpdivxazjgsrgiq.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_aAjs8tF_8c8sB30ekxSXZQ_KxaBMBTE";
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); // :contentReference[oaicite:3]{index=3}
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY); // :contentReference[oaicite:3]{index=3}
 
     const cloudLine = document.getElementById("cloudLine");
 
@@ -347,16 +347,16 @@
 
     async function ensureMachineRow(){
       // insert if missing
-      const { data, error } = await supabase.from("machines").select("id").eq("id", machineId).maybeSingle();
+      const { data, error } = await sb.from("machines").select("id").eq("id", machineId).maybeSingle();
       if (error) throw error;
       if (!data){
-        const ins = await supabase.from("machines").insert([{ id: machineId, status: "running", status_since: new Date().toISOString() }]);
+        const ins = await sb.from("machines").insert([{ id: machineId, status: "running", status_since: new Date().toISOString() }]);
         if (ins.error) throw ins.error;
       }
     }
 
     async function getMachineState(){
-      const { data, error } = await supabase
+      const { data, error } = await sb
         .from("machines")
         .select("status,status_since")
         .eq("id", machineId)
@@ -370,13 +370,13 @@
       const fromStatus = (cur.status || "running").toLowerCase();
       const nowIso = new Date().toISOString();
 
-      const up = await supabase
+      const up = await sb
         .from("machines")
         .update({ status: newStatus, status_since: nowIso })
         .eq("id", machineId);
       if (up.error) throw up.error;
 
-      const log = await supabase
+      const log = await sb
         .from("status_log")
         .insert([{ machine_id: machineId, changed_at: nowIso, from_status: fromStatus, to_status: newStatus }]);
       if (log.error) throw log.error;
@@ -511,7 +511,7 @@
 
     // ---------- supabase queries ----------
     async function fetchProjects(){
-      const { data, error } = await supabase
+      const { data, error } = await sb
         .from("project_entries")
         .select("*")
         .eq("machine_id", machineId)
@@ -522,7 +522,7 @@
     }
 
     async function fetchProduction(){
-      const { data, error } = await supabase
+      const { data, error } = await sb
         .from("production_entries")
         .select("*")
         .eq("machine_id", machineId)
@@ -533,7 +533,7 @@
     }
 
     async function addProjectEntry(){
-      const ins = await supabase.from("project_entries").insert([ getProjForm() ]);
+      const ins = await sb.from("project_entries").insert([ getProjForm() ]);
       if (ins.error) throw ins.error;
       clearProjForm();
       setProjEditMode(null);
@@ -542,7 +542,7 @@
 
     async function updateProjectEntry(){
       if (!editingProjId) return;
-      const up = await supabase.from("project_entries").update(getProjForm()).eq("id", editingProjId);
+      const up = await sb.from("project_entries").update(getProjForm()).eq("id", editingProjId);
       if (up.error) throw up.error;
       clearProjForm();
       setProjEditMode(null);
@@ -550,14 +550,14 @@
     }
 
     async function deleteProjectEntry(id){
-      const del = await supabase.from("project_entries").delete().eq("id", id);
+      const del = await sb.from("project_entries").delete().eq("id", id);
       if (del.error) throw del.error;
       if (editingProjId === id){ clearProjForm(); setProjEditMode(null); }
       await renderAll();
     }
 
     async function addProductionEntry(){
-      const ins = await supabase.from("production_entries").insert([ getProdForm() ]);
+      const ins = await sb.from("production_entries").insert([ getProdForm() ]);
       if (ins.error) throw ins.error;
       clearProdForm();
       setProdEditMode(null);
@@ -567,7 +567,7 @@
 
     async function updateProductionEntry(){
       if (!editingProdId) return;
-      const up = await supabase.from("production_entries").update(getProdForm()).eq("id", editingProdId);
+      const up = await sb.from("production_entries").update(getProdForm()).eq("id", editingProdId);
       if (up.error) throw up.error;
       clearProdForm();
       setProdEditMode(null);
@@ -576,7 +576,7 @@
     }
 
     async function deleteProductionEntry(id){
-      const del = await supabase.from("production_entries").delete().eq("id", id);
+      const del = await sb.from("production_entries").delete().eq("id", id);
       if (del.error) throw del.error;
       if (editingProdId === id){ clearProdForm(); setProdEditMode(null); }
       await renderAll();
@@ -760,17 +760,17 @@
 
     // ---------- Packout goal + rollups ----------
     async function fetchPackoutGoal(){
-      const { data, error } = await supabase.from("packout_goal").select("ytd_goal").eq("id", 1).maybeSingle();
+      const { data, error } = await sb.from("packout_goal").select("ytd_goal").eq("id", 1).maybeSingle();
       if (error) throw error;
       return safeNum(data?.ytd_goal);
     }
     async function setPackoutGoal(goal){
       // update single row
-      const up = await supabase.from("packout_goal").update({ ytd_goal: goal }).eq("id", 1);
+      const up = await sb.from("packout_goal").update({ ytd_goal: goal }).eq("id", 1);
       if (up.error) throw up.error;
     }
     async function fetchPackoutProd(fromDateISO){
-      const { data, error } = await supabase
+      const { data, error } = await sb
         .from("production_entries")
         .select("prod_date,parts_ran")
         .eq("machine_id", "packout")
@@ -866,4 +866,5 @@
   </script>
 </body>
 </html>
+
 
