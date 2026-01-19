@@ -28,18 +28,18 @@
     }
 
     .wrap{
-      w: min(1850px, 98vw);
+      width: min(1850px, 98vw);
       margin: 0 auto;
       padding: 12px 12px 0;
       box-sizing:border-box;
       display:flex;
       flex-direction:column;
-      min-h:100vh;
+      min-height:100vh;
     }
 
     .board{
       position:relative;
-      w:100%;
+      width:100%;
       flex: 1 1 auto;
       aspect-ratio: 1828 / 661;
       background:var(--bg);
@@ -88,13 +88,13 @@
       position:absolute;
       y:2%;
       bottom:2%;
-      w:0;
+      width:0;
       border-x: 4px solid #000;
     }
 
     .hline{
       position:absolute;
-      h:0;
+      height:0;
       border-y: 4px solid #000;
     }
 
@@ -160,7 +160,7 @@
       font-size:12px;
       line-h:1.25;
       box-shadow:0 4px 12px rgba(0,0,0,.10);
-      w: auto;
+      width: auto;
       box-sizing:border-box;
     }
     .metric-row{ display:flex; justify-content:space-between; gap:10px; }
