@@ -63,30 +63,108 @@
 <h2 id="machineTitle">Machine</h2>
 
 <!-- ================= PACKOUT WEEKLY GOALS ================= -->
-<div id="packoutThroughputCard" class="card" style="display:none;">
-  <div class="section-title">Packout Weekly Goals</div>
+<div id="packoutThroughputCard" style="display:none; margin-top:12px;">
+  <div class="section-title">Packout Weekly Goals (Calendar)</div>
 
-  <div class="note">
-    Enter a goal for each Monday-start week.  
-    Monthly and yearly goals are calculated automatically.
+  <div class="note" style="margin-top:6px;">
+    Enter a goal for each Monday-start week (ex: 1/19, 1/26, 2/2).
+    Monthly goal = sum of all weeks in the current month up to (and including) the current week.
+    Yearly goal = sum of all weeks in the year up to (and including) the current week.
   </div>
 
-  <div id="weeklyGoalsGrid"
-       style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px;
-              margin-top:10px; max-height:260px; overflow:auto;">
+  <div class="form" style="margin-top:10px;">
+    <div class="full">
+      <label>Weekly goals (this year)</label>
+      <div id="weeklyGoalsGrid"
+           style="display:grid; grid-template-columns: repeat(4, minmax(0,1fr));
+                  gap:10px; max-height:260px; overflow:auto; padding:10px;
+                  border:1px solid #ddd; border-radius:12px; background:#fff;">
+      </div>
+      <div class="note" style="margin-top:8px;">
+        Tip: edit any week, then click <strong>Save Weekly Goals</strong>.
+      </div>
+    </div>
   </div>
 
   <div class="actions">
-    <button class="primary" id="saveWeeklyGoalsBtn">Save Weekly Goals</button>
+    <button id="saveWeeklyGoalsBtn">Save Weekly Goals</button>
   </div>
 
-  <div style="margin-top:10px;">
+  <div class="summary" style="flex-wrap:wrap;">
     <span class="pill" id="weeklyPill">Weekly: —</span>
     <span class="pill" id="monthlyPill">Monthly: —</span>
     <span class="pill" id="yearlyPill">Yearly: —</span>
     <span class="pill" id="yearlyPctPill">Year %: —</span>
   </div>
+
+  <div class="note">
+    Actuals are computed from Packout’s Production/Scrap “# Parts ran” entries.
+  </div>
 </div>
+
+  // ---- Weekly Goals Helpers (Monday-start weeks) ----
+function weekStartMonday(d = new Date()){
+  const dt = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const day = dt.getDay(); // 0 Sun .. 6 Sat
+  const diff = (day === 0) ? -6 : (1 - day); // to Monday
+  dt.setDate(dt.getDate() + diff);
+  dt.setHours(0,0,0,0);
+  return dt;
+}
+function addDays(d, n){
+  const dt = new Date(d);
+  dt.setDate(dt.getDate() + n);
+  return dt;
+}
+function isoDate(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const da = String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${da}`;
+}
+function startOfMonth(d=new Date()){ return new Date(d.getFullYear(), d.getMonth(), 1); }
+function startOfYear(d=new Date()){ return new Date(d.getFullYear(), 0, 1); }
+function fmtMD(d){ return `${d.getMonth()+1}/${d.getDate()}`; }
+
+async function fetchWeeklyGoals(year){
+  const y = year ?? (new Date()).getFullYear();
+  const { data, error } = await sb
+    .from("weekly_goals")
+    .select("week_start,goal")
+    .eq("machine_id","packout")
+    .gte("week_start", `${y}-01-01`)
+    .lte("week_start", `${y}-12-31`);
+  if (error) throw error;
+  return data || [];
+}
+async function upsertWeeklyGoals(rows){
+  const payload = rows.map(r=>({
+    machine_id: "packout",
+    week_start: r.week_start,
+    goal: r.goal
+  }));
+  const { error } = await sb.from("weekly_goals")
+    .upsert(payload, { onConflict: "machine_id,week_start" });
+  if (error) throw error;
+}
+
+// Actuals from production_entries for Packout
+async function sumPackoutParts(fromISO, toISOExclusive){
+  const { data, error } = await sb
+    .from("production_entries")
+    .select("prod_date,parts_ran")
+    .eq("machine_id","packout")
+    .gte("prod_date", fromISO)
+    .lt("prod_date", toISOExclusive);
+  if (error) throw error;
+  return (data || []).reduce((a,r)=>a + safeNum(r.parts_ran), 0);
+}
+
+function leftOrOver(goal, actual){
+  const diff = (Number(goal||0) - Number(actual||0));
+  if (diff >= 0) return { label:"Left", value: diff };
+  return { label:"Over", value: Math.abs(diff) };
+}
 
 <script>
 /* ================= SUPABASE ================= */
@@ -162,92 +240,127 @@ async function sumActual(fromISO,toISO){
 
 /* ================= RENDER ================= */
 async function renderPackoutUI(){
-  document.getElementById("packoutThroughputCard").style.display = "block";
-  document.getElementById("machineTitle").textContent = "Packout";
+  const card = document.getElementById("packoutThroughputCard");
+  if (machineId !== "packout"){ card.style.display="none"; return; }
+  card.style.display="block";
 
   const grid = document.getElementById("weeklyGoalsGrid");
   const weeklyPill = document.getElementById("weeklyPill");
   const monthlyPill = document.getElementById("monthlyPill");
   const yearlyPill = document.getElementById("yearlyPill");
   const yearlyPctPill = document.getElementById("yearlyPctPill");
+  const saveBtn = document.getElementById("saveWeeklyGoalsBtn");
 
   const now = new Date();
-  const year = now.getFullYear();
-  const thisWeek = weekStartMonday(now);
-  const nextWeek = addDays(thisWeek,7);
+  const y = now.getFullYear();
+  const currentWeekStart = weekStartMonday(now);
+  const nextWeekStart = addDays(currentWeekStart, 7);
 
+  // Build all Monday-start weeks for the year
   const weeks = [];
-  let w = weekStartMonday(startOfYear(now));
-  const stop = weekStartMonday(new Date(year+1,0,1));
-  while(w < stop){
-    weeks.push(new Date(w));
-    w = addDays(w,7);
+  let cur = weekStartMonday(startOfYear(now));
+  const stop = weekStartMonday(new Date(y+1,0,1));
+  while (cur < stop){
+    weeks.push(new Date(cur));
+    cur = addDays(cur, 7);
   }
 
-  const goals = await fetchWeeklyGoals(year);
-  const goalMap = new Map(goals.map(g=>[g.week_start, safeNum(g.goal)]));
+  const goalRows = await fetchWeeklyGoals(y);
+  const goalMap = new Map(goalRows.map(r=>[r.week_start, safeNum(r.goal)]));
 
+  // Render grid
   grid.innerHTML = "";
-  weeks.forEach(ws=>{
-    const box = document.createElement("div");
-    box.style.border = iso(ws)===iso(thisWeek) ? "2px solid #0ea5e9":"1px solid #ddd";
-    box.style.borderRadius="12px";
-    box.style.padding="8px";
-    box.style.background="#fff";
+  for (const ws of weeks){
+    const iso = isoDate(ws);
+    const val = goalMap.get(iso) ?? "";
+    const isCurrent = iso === isoDate(currentWeekStart);
 
-    const t = document.createElement("div");
-    t.style.fontWeight="700";
-    t.textContent = `${ws.getMonth()+1}/${ws.getDate()}`;
+    const wrap = document.createElement("div");
+    wrap.style.border = isCurrent ? "2px solid #0ea5e9" : "1px solid #ddd";
+    wrap.style.borderRadius = "12px";
+    wrap.style.padding = "10px";
+    wrap.style.background = "#fff";
+
+    const title = document.createElement("div");
+    title.style.fontWeight = "700";
+    title.style.marginBottom = "6px";
+    title.textContent = fmtMD(ws);
 
     const inp = document.createElement("input");
-    inp.type="number";
-    inp.style.width="100%";
-    inp.dataset.week = iso(ws);
-    inp.value = goalMap.get(iso(ws)) || "";
+    inp.type = "number";
+    inp.min = "0";
+    inp.step = "1";
+    inp.value = val === "" ? "" : String(val);
+    inp.placeholder = "goal";
+    inp.dataset.weekStart = iso;
+    inp.style.width = "100%";
 
-    box.appendChild(t);
-    box.appendChild(inp);
-    grid.appendChild(box);
-  });
+    wrap.appendChild(title);
+    wrap.appendChild(inp);
+    grid.appendChild(wrap);
+  }
 
-  document.getElementById("saveWeeklyGoalsBtn").onclick = async ()=>{
-    const rows = Array.from(grid.querySelectorAll("input"))
-      .map(i=>({ week_start:i.dataset.week, goal:safeNum(i.value) }))
-      .filter(r=>r.goal>0);
-    await saveWeeklyGoals(rows);
-    alert("Weekly goals saved");
-    renderPackoutUI();
+  // Save
+  saveBtn.onclick = async ()=>{
+    try{
+      const inputs = Array.from(grid.querySelectorAll("input[data-week-start]"));
+      const rows = inputs
+        .map(i=>({ week_start: i.dataset.weekStart, goal: safeNum(i.value) }))
+        .filter(r=>r.goal > 0);
+
+      await upsertWeeklyGoals(rows);
+      toast("Weekly goals saved");
+      await renderPackoutUI();
+    }catch(e){
+      console.error(e);
+      alert("Failed to save weekly goals. Check console.");
+    }
   };
 
-  const weeklyGoal = safeNum(goalMap.get(iso(thisWeek)));
+  // Goals
+  const currentISO = isoDate(currentWeekStart);
+  const weeklyGoal = safeNum(goalMap.get(currentISO));
 
   let monthlyGoal = 0;
+  for (const ws of weeks){
+    if (ws.getMonth() !== now.getMonth()) continue;
+    if (ws > currentWeekStart) continue;
+    monthlyGoal += safeNum(goalMap.get(isoDate(ws)));
+  }
+
   let yearlyGoal = 0;
-  goalMap.forEach((g,ws)=>{
-    const d = new Date(ws);
-    if(d <= thisWeek){
-      yearlyGoal += g;
-      if(d.getMonth() === now.getMonth()) monthlyGoal += g;
-    }
-  });
+  for (const ws of weeks){
+    if (ws > currentWeekStart) continue;
+    yearlyGoal += safeNum(goalMap.get(isoDate(ws)));
+  }
 
-  const weeklyActual = await sumActual(iso(thisWeek), iso(nextWeek));
-  const monthlyActual = await sumActual(iso(startOfMonth(now)), iso(new Date(year, now.getMonth()+1,1)));
-  const yearlyActual = await sumActual(iso(startOfYear(now)), iso(new Date(year+1,0,1)));
+  // Actuals
+  const weeklyActual = await sumPackoutParts(isoDate(currentWeekStart), isoDate(nextWeekStart));
 
-  const wv = leftOrOver(weeklyGoal, weeklyActual);
-  const mv = leftOrOver(monthlyGoal, monthlyActual);
-  const yv = leftOrOver(yearlyGoal, yearlyActual);
-  const pct = yearlyGoal>0 ? Math.round((yearlyActual/yearlyGoal)*1000)/10 : 0;
+  const monthActualFrom = isoDate(startOfMonth(now));
+  const monthActualTo = isoDate(new Date(now.getFullYear(), now.getMonth()+1, 1));
+  const monthlyActual = await sumPackoutParts(monthActualFrom, monthActualTo);
 
-  weeklyPill.textContent = `Weekly ${weeklyGoal} | Actual ${weeklyActual} | ${wv.label} ${wv.value}`;
-  monthlyPill.textContent = `Monthly ${monthlyGoal} | Actual ${monthlyActual} | ${mv.label} ${mv.value}`;
-  yearlyPill.textContent = `Yearly ${yearlyGoal} | Actual ${yearlyActual} | ${yv.label} ${yv.value}`;
+  const yearActualFrom = isoDate(startOfYear(now));
+  const yearActualTo = isoDate(new Date(now.getFullYear()+1, 0, 1));
+  const yearlyActual = await sumPackoutParts(yearActualFrom, yearActualTo);
+
+  const w = leftOrOver(weeklyGoal, weeklyActual);
+  const m = leftOrOver(monthlyGoal, monthlyActual);
+  const yy = leftOrOver(yearlyGoal, yearlyActual);
+  const pct = yearlyGoal > 0 ? Math.round((yearlyActual / yearlyGoal) * 1000)/10 : 0;
+
+  weeklyPill.textContent = `Weekly goal ${weeklyGoal} | Actual ${weeklyActual} | ${w.label} ${w.value}`;
+  monthlyPill.textContent = `Monthly goal ${monthlyGoal} | Actual ${monthlyActual} | ${m.label} ${m.value}`;
+  yearlyPill.textContent = `Yearly goal ${yearlyGoal} | Actual ${yearlyActual} | ${yy.label} ${yy.value}`;
   yearlyPctPill.textContent = `Year %: ${pct}%`;
 }
+
+
 
 renderPackoutUI();
 </script>
 
 </body>
 </html>
+
