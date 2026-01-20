@@ -1,366 +1,864 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Machine View</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-
+  <meta charset="utf-8"/>
+  <title>Machine</title>
   <style>
-    body{
-      font-family: Arial, Helvetica, sans-serif;
-      margin:0;
-      padding:16px;
-      background:#f5f5f5;
+    body{ font-family: Arial, sans-serif; margin:0; background:#f4f4f4; }
+    header{ display:flex; gap:12px; align-items:center; padding:12px 14px; background:#222; color:#fff; }
+    header a{ color:#fff; text-decoration:none; opacity:.9; }
+    header a:hover{ opacity:1; text-decoration:underline; }
+    .wrap{ max-width:1200px; margin:0 auto; padding:14px; }
+    .row{ display:flex; flex-wrap:wrap; gap:12px; }
+    .card{ background:#fff; border:1px solid #ddd; border-radius:14px; padding:14px; flex:1; min-width:280px; box-shadow:0 2px 12px rgba(0,0,0,.05); }
+    .title{ font-size:20px; font-weight:800; margin:0 0 8px; }
+    .sub{ font-size:12px; opacity:.8; margin:0 0 10px; }
+    .badge{ display:inline-block; padding:4px 10px; border-radius:999px; background:#eee; font-size:12px; }
+    .grid{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+    .section-title{ font-weight:800; margin:0 0 6px; }
+    .note{ font-size:12px; opacity:.8; margin-top:8px; line-height:1.4; }
+    .form{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+    .form .full{ grid-column: 1 / -1; }
+    label{ display:block; font-size:12px; opacity:.8; margin:0 0 6px; }
+    input, select, textarea{
+      width:100%; box-sizing:border-box; padding:10px 10px; border:1px solid #ccc; border-radius:10px; outline:none;
+      font-size:14px; background:#fff;
     }
-    .card{
-      background:#fff;
-      border:1px solid #ddd;
-      border-radius:14px;
-      padding:14px;
-      margin-bottom:16px;
-      box-shadow:0 2px 10px rgba(0,0,0,.06);
-    }
-    .section-title{
-      font-weight:700;
-      margin-bottom:6px;
-    }
-    .note{
-      font-size:12px;
-      color:#555;
-      line-height:1.4;
-    }
-    .actions{
-      margin-top:10px;
-    }
+    textarea{ min-height:80px; resize:vertical; }
+    .actions{ display:flex; gap:10px; align-items:center; margin-top:10px; flex-wrap:wrap; }
     button{
-      padding:8px 12px;
-      border-radius:10px;
-      border:1px solid #444;
-      background:#fff;
-      cursor:pointer;
+      padding:10px 12px; border-radius:10px; border:1px solid #333; background:#fff; cursor:pointer;
+      font-weight:700;
     }
-    button.primary{
-      background:#0ea5e9;
-      color:#fff;
-      border-color:#0ea5e9;
-    }
-    .pill{
-      padding:6px 10px;
-      border-radius:999px;
-      background:#eee;
-      font-size:12px;
-      margin-right:6px;
-      margin-top:6px;
-      display:inline-block;
-    }
+    button.primary{ background:#0ea5e9; border-color:#0ea5e9; color:#fff; }
+    button.danger{ background:#ef4444; border-color:#ef4444; color:#fff; }
+    .table{ width:100%; border-collapse:collapse; margin-top:10px; }
+    .table th, .table td{ text-align:left; padding:8px 8px; border-bottom:1px solid #eee; font-size:13px; vertical-align:top; }
+    .table th{ font-size:12px; opacity:.8; }
+    .pill{ display:inline-block; padding:6px 10px; border-radius:999px; background:#eee; font-size:12px; margin-right:6px; }
+    .muted{ opacity:.7; }
+    .right{ text-align:right; }
+    .kpi{ display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; }
+    .kpi .pill{ background:#f1f5f9; }
   </style>
-
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-
 <body>
+<header>
+  <a href="index.html">← Layout</a>
+  <div style="flex:1"></div>
+  <a href="admin.html">Admin</a>
+</header>
 
-<h2 id="machineTitle">Machine</h2>
-
-<!-- ================= PACKOUT WEEKLY GOALS ================= -->
-<div id="packoutThroughputCard" style="display:none; margin-top:12px;">
-  <div class="section-title">Packout Weekly Goals (Calendar)</div>
-
-  <div class="note" style="margin-top:6px;">
-    Enter a goal for each Monday-start week (ex: 1/19, 1/26, 2/2).
-    Monthly goal = sum of all weeks in the current month up to (and including) the current week.
-    Yearly goal = sum of all weeks in the year up to (and including) the current week.
-  </div>
-
-  <div class="form" style="margin-top:10px;">
-    <div class="full">
-      <label>Weekly goals (this year)</label>
-      <div id="weeklyGoalsGrid"
-           style="display:grid; grid-template-columns: repeat(4, minmax(0,1fr));
-                  gap:10px; max-height:260px; overflow:auto; padding:10px;
-                  border:1px solid #ddd; border-radius:12px; background:#fff;">
+<div class="wrap">
+  <div class="row">
+    <div class="card" style="flex:2;">
+      <div class="title" id="machineTitle">Machine</div>
+      <div class="sub">
+        <span class="badge" id="statusBadge">Status: —</span>
+        <span class="badge" id="timerBadge" style="margin-left:8px;">—</span>
       </div>
-      <div class="note" style="margin-top:8px;">
-        Tip: edit any week, then click <strong>Save Weekly Goals</strong>.
+      <div class="note" id="cloudLine">Cloud: —</div>
+
+      <div class="form" style="margin-top:10px;">
+        <div>
+          <label>Status</label>
+          <select id="statusSelect">
+            <option value="running">Running</option>
+            <option value="running-problems">Running - Needs Work</option>
+            <option value="down">Down</option>
+          </select>
+        </div>
+        <div>
+          <label>Reason / Note</label>
+          <input id="statusNote" placeholder="Optional note for status change"/>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="statusSaveBtn" class="primary">Save Status</button>
+        <button id="statusClearNoteBtn">Clear Note</button>
+      </div>
+
+      <!-- Packout goal card -->
+      <div class="card" style="margin-top:12px;">
+        <div id="packoutThroughputCard" style="display:none; margin-top:12px;">
+        <div class="section-title">Packout Throughput (Weekly Goals + Rollups)</div>
+
+        <div class="note" style="margin-top:6px;">
+          Enter a goal for each Monday-start week (e.g., 1/19, 1/26, 2/2). Goals are cumulative:
+          <strong>Monthly goal</strong> = sum of all weeks in the current month up to (and including) the current week.
+          <strong>Yearly goal</strong> = sum of all weeks in the year up to (and including) the current week.
+        </div>
+
+        <div class="form" style="margin-top:10px;">
+          <div class="full">
+            <label>Weekly goals (this year)</label>
+            <div id="weeklyGoalsGrid"
+                 style="display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:10px;
+                        max-height:260px; overflow:auto; padding:10px; border:1px solid #ddd;
+                        border-radius:12px; background:#fff;"></div>
+            <div class="note" style="margin-top:8px;">
+              Tip: edit any week, then click <strong>Save Weekly Goals</strong>.
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="saveWeeklyGoalsBtn">Save Weekly Goals</button>
+        </div>
+
+        <div class="summary" style="flex-wrap:wrap;">
+          <span class="pill" id="weeklyPill">Weekly: —</span>
+          <span class="pill" id="monthlyPill">Monthly: —</span>
+          <span class="pill" id="yearlyPill">Yearly: —</span>
+          <span class="pill" id="yearlyPctPill">Year %: —</span>
+        </div>
+
+        <div class="note">
+          Actuals are computed from Packout’s Production/Scrap “# Parts ran” entries in the cloud.
+        </div>
+      </div>
+    </div>
+    </div>
+
+    <div class="card" style="flex:1; min-width:320px;">
+      <div class="section-title">Machine Info</div>
+      <div class="note">
+        Machine ID: <span id="machineIdLine" class="muted">—</span><br/>
+        Last update: <span id="lastUpdateLine" class="muted">—</span>
+      </div>
+
+      <div class="kpi">
+        <span class="pill" id="prodCountPill">Prod entries: —</span>
+        <span class="pill" id="projCountPill">Project entries: —</span>
+        <span class="pill" id="latestPill">Latest: —</span>
       </div>
     </div>
   </div>
 
-  <div class="actions">
-    <button id="saveWeeklyGoalsBtn">Save Weekly Goals</button>
-  </div>
+  <div class="grid" style="margin-top:12px;">
+    <div class="card">
+      <div class="section-title">Project Log</div>
 
-  <div class="summary" style="flex-wrap:wrap;">
-    <span class="pill" id="weeklyPill">Weekly: —</span>
-    <span class="pill" id="monthlyPill">Monthly: —</span>
-    <span class="pill" id="yearlyPill">Yearly: —</span>
-    <span class="pill" id="yearlyPctPill">Year %: —</span>
-  </div>
+      <div class="form" style="margin-top:8px;">
+        <div>
+          <label>Date</label>
+          <input id="projDate" type="date"/>
+        </div>
+        <div>
+          <label>Engineer</label>
+          <input id="projEngineer" placeholder="Name"/>
+        </div>
+        <div class="full">
+          <label>Project / Notes</label>
+          <textarea id="projNotes" placeholder="Project notes / updates"></textarea>
+        </div>
+      </div>
 
-  <div class="note">
-    Actuals are computed from Packout’s Production/Scrap “# Parts ran” entries.
+      <div class="actions">
+        <button id="projSaveBtn" class="primary">Save Project</button>
+        <button id="projUpdateBtn">Update Selected</button>
+        <button id="projCancelBtn">Cancel Edit</button>
+      </div>
+
+      <table class="table" id="projTable">
+        <thead>
+          <tr>
+            <th style="width:110px;">Date</th>
+            <th style="width:130px;">Engineer</th>
+            <th>Notes</th>
+            <th class="right" style="width:120px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Production / Scrap</div>
+
+      <div class="form" style="margin-top:8px;">
+        <div>
+          <label>Date</label>
+          <input id="prodDate" type="date"/>
+        </div>
+        <div>
+          <label># Parts ran</label>
+          <input id="prodParts" type="number" min="0" step="1" placeholder="0"/>
+        </div>
+        <div>
+          <label>Scrap Qty</label>
+          <input id="prodScrap" type="number" min="0" step="1" placeholder="0"/>
+        </div>
+        <div>
+          <label>Scrap Reason</label>
+          <input id="prodReason" placeholder="Optional"/>
+        </div>
+        <div class="full">
+          <label>Notes</label>
+          <textarea id="prodNotes" placeholder="Optional notes"></textarea>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="prodSaveBtn" class="primary">Save Production</button>
+        <button id="prodUpdateBtn">Update Selected</button>
+        <button id="prodCancelBtn">Cancel Edit</button>
+      </div>
+
+      <table class="table" id="prodTable">
+        <thead>
+          <tr>
+            <th style="width:110px;">Date</th>
+            <th style="width:110px;">Parts</th>
+            <th style="width:110px;">Scrap</th>
+            <th style="width:160px;">Reason</th>
+            <th>Notes</th>
+            <th class="right" style="width:120px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </div>
 </div>
 
-  // ---- Weekly Goals Helpers (Monday-start weeks) ----
-function weekStartMonday(d = new Date()){
-  const dt = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const day = dt.getDay(); // 0 Sun .. 6 Sat
-  const diff = (day === 0) ? -6 : (1 - day); // to Monday
-  dt.setDate(dt.getDate() + diff);
-  dt.setHours(0,0,0,0);
-  return dt;
-}
-function addDays(d, n){
-  const dt = new Date(d);
-  dt.setDate(dt.getDate() + n);
-  return dt;
-}
-function isoDate(d){
-  const y = d.getFullYear();
-  const m = String(d.getMonth()+1).padStart(2,"0");
-  const da = String(d.getDate()).padStart(2,"0");
-  return `${y}-${m}-${da}`;
-}
-function startOfMonth(d=new Date()){ return new Date(d.getFullYear(), d.getMonth(), 1); }
-function startOfYear(d=new Date()){ return new Date(d.getFullYear(), 0, 1); }
-function fmtMD(d){ return `${d.getMonth()+1}/${d.getDate()}`; }
-
-async function fetchWeeklyGoals(year){
-  const y = year ?? (new Date()).getFullYear();
-  const { data, error } = await sb
-    .from("weekly_goals")
-    .select("week_start,goal")
-    .eq("machine_id","packout")
-    .gte("week_start", `${y}-01-01`)
-    .lte("week_start", `${y}-12-31`);
-  if (error) throw error;
-  return data || [];
-}
-async function upsertWeeklyGoals(rows){
-  const payload = rows.map(r=>({
-    machine_id: "packout",
-    week_start: r.week_start,
-    goal: r.goal
-  }));
-  const { error } = await sb.from("weekly_goals")
-    .upsert(payload, { onConflict: "machine_id,week_start" });
-  if (error) throw error;
-}
-
-// Actuals from production_entries for Packout
-async function sumPackoutParts(fromISO, toISOExclusive){
-  const { data, error } = await sb
-    .from("production_entries")
-    .select("prod_date,parts_ran")
-    .eq("machine_id","packout")
-    .gte("prod_date", fromISO)
-    .lt("prod_date", toISOExclusive);
-  if (error) throw error;
-  return (data || []).reduce((a,r)=>a + safeNum(r.parts_ran), 0);
-}
-
-function leftOrOver(goal, actual){
-  const diff = (Number(goal||0) - Number(actual||0));
-  if (diff >= 0) return { label:"Left", value: diff };
-  return { label:"Over", value: Math.abs(diff) };
-}
-
 <script>
-/* ================= SUPABASE ================= */
-const SUPABASE_URL = "https://vycwkgpdivxazjgsrgiq.supabase.co";
-const SUPABASE_ANON_KEY = "PASTE_YOUR_ANON_KEY_HERE";
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  // ----------------------------
+  // Supabase
+  // ----------------------------
+  const SUPABASE_URL = "https://vycwkgpdivxazjgsrgiq.supabase.co";
+  const SUPABASE_ANON_KEY = "PASTE_YOUR_ANON_KEY_HERE";
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-/* ================= HELPERS ================= */
-const safeNum = v => isNaN(Number(v)) ? 0 : Number(v);
+  // ----------------------------
+  // URL machine id
+  // ----------------------------
+  const url = new URL(location.href);
+  const machineId = (url.searchParams.get("id") || "").toLowerCase() || "packout";
 
-function weekStartMonday(d){
-  const dt = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const day = dt.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  dt.setDate(dt.getDate() + diff);
-  dt.setHours(0,0,0,0);
-  return dt;
-}
-function addDays(d,n){
-  const x = new Date(d);
-  x.setDate(x.getDate()+n);
-  return x;
-}
-function iso(d){
-  return d.toISOString().slice(0,10);
-}
-function startOfMonth(d){
-  return new Date(d.getFullYear(), d.getMonth(), 1);
-}
-function startOfYear(d){
-  return new Date(d.getFullYear(), 0, 1);
-}
-function leftOrOver(goal, actual){
-  const diff = goal - actual;
-  if(diff >= 0) return { label:"Left", value:diff };
-  return { label:"Over", value:Math.abs(diff) };
-}
+  document.getElementById("machineIdLine").textContent = machineId;
+  document.getElementById("machineTitle").textContent = machineId.toUpperCase();
 
-/* ================= DATA ================= */
-async function fetchWeeklyGoals(year){
-  const { data, error } = await sb
-    .from("weekly_goals")
-    .select("week_start,goal")
-    .eq("machine_id","packout")
-    .gte("week_start", `${year}-01-01`)
-    .lte("week_start", `${year}-12-31`);
-  if(error) throw error;
-  return data || [];
-}
+  const statusSelect = document.getElementById("statusSelect");
+  const statusNote = document.getElementById("statusNote");
+  const statusBadge = document.getElementById("statusBadge");
+  const timerBadge = document.getElementById("timerBadge");
+  const cloudLine = document.getElementById("cloudLine");
 
-async function saveWeeklyGoals(rows){
-  const payload = rows.map(r=>({
-    machine_id:"packout",
-    week_start:r.week_start,
-    goal:r.goal
-  }));
-  const { error } = await sb
-    .from("weekly_goals")
-    .upsert(payload,{ onConflict:"machine_id,week_start" });
-  if(error) throw error;
-}
-
-async function sumActual(fromISO,toISO){
-  const { data, error } = await sb
-    .from("production_entries")
-    .select("parts_ran,prod_date")
-    .eq("machine_id","packout")
-    .gte("prod_date",fromISO)
-    .lt("prod_date",toISO);
-  if(error) throw error;
-  return (data||[]).reduce((a,r)=>a+safeNum(r.parts_ran),0);
-}
-
-/* ================= RENDER ================= */
-async function renderPackoutUI(){
-  const card = document.getElementById("packoutThroughputCard");
-  if (machineId !== "packout"){ card.style.display="none"; return; }
-  card.style.display="block";
-
-  const grid = document.getElementById("weeklyGoalsGrid");
-  const weeklyPill = document.getElementById("weeklyPill");
-  const monthlyPill = document.getElementById("monthlyPill");
-  const yearlyPill = document.getElementById("yearlyPill");
-  const yearlyPctPill = document.getElementById("yearlyPctPill");
-  const saveBtn = document.getElementById("saveWeeklyGoalsBtn");
-
-  const now = new Date();
-  const y = now.getFullYear();
-  const currentWeekStart = weekStartMonday(now);
-  const nextWeekStart = addDays(currentWeekStart, 7);
-
-  // Build all Monday-start weeks for the year
-  const weeks = [];
-  let cur = weekStartMonday(startOfYear(now));
-  const stop = weekStartMonday(new Date(y+1,0,1));
-  while (cur < stop){
-    weeks.push(new Date(cur));
-    cur = addDays(cur, 7);
+  // ----------------------------
+  // Helpers
+  // ----------------------------
+  function safeNum(x){
+    const n = Number(x);
+    return isNaN(n) ? 0 : n;
+  }
+  function isoToday(){
+    const d=new Date();
+    const yyyy=d.getFullYear();
+    const mm=String(d.getMonth()+1).padStart(2,"0");
+    const dd=String(d.getDate()).padStart(2,"0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  function startOfYearISO(){ return `${new Date().getFullYear()}-01-01`; }
+  function startOfMonthISO(){
+    const d=new Date();
+    const y=d.getFullYear();
+    const m=String(d.getMonth()+1).padStart(2,"0");
+    return `${y}-${m}-01`;
+  }
+  function fmtDate(iso){
+    if(!iso) return "";
+    return String(iso).slice(0,10);
+  }
+  function fmtTimeAgo(ts){
+    if(!ts) return "—";
+    const t = new Date(ts).getTime();
+    const diff = Math.max(0, Date.now()-t);
+    const s = Math.floor(diff/1000);
+    const m = Math.floor(s/60);
+    const h = Math.floor(m/60);
+    const d = Math.floor(h/24);
+    if(d>0) return `${d}d ${h%24}h`;
+    if(h>0) return `${h}h ${m%60}m`;
+    if(m>0) return `${m}m ${s%60}s`;
+    return `${s}s`;
   }
 
-  const goalRows = await fetchWeeklyGoals(y);
-  const goalMap = new Map(goalRows.map(r=>[r.week_start, safeNum(r.goal)]));
-
-  // Render grid
-  grid.innerHTML = "";
-  for (const ws of weeks){
-    const iso = isoDate(ws);
-    const val = goalMap.get(iso) ?? "";
-    const isCurrent = iso === isoDate(currentWeekStart);
-
-    const wrap = document.createElement("div");
-    wrap.style.border = isCurrent ? "2px solid #0ea5e9" : "1px solid #ddd";
-    wrap.style.borderRadius = "12px";
-    wrap.style.padding = "10px";
-    wrap.style.background = "#fff";
-
-    const title = document.createElement("div");
-    title.style.fontWeight = "700";
-    title.style.marginBottom = "6px";
-    title.textContent = fmtMD(ws);
-
-    const inp = document.createElement("input");
-    inp.type = "number";
-    inp.min = "0";
-    inp.step = "1";
-    inp.value = val === "" ? "" : String(val);
-    inp.placeholder = "goal";
-    inp.dataset.weekStart = iso;
-    inp.style.width = "100%";
-
-    wrap.appendChild(title);
-    wrap.appendChild(inp);
-    grid.appendChild(wrap);
-  }
-
-  // Save
-  saveBtn.onclick = async ()=>{
-    try{
-      const inputs = Array.from(grid.querySelectorAll("input[data-week-start]"));
-      const rows = inputs
-        .map(i=>({ week_start: i.dataset.weekStart, goal: safeNum(i.value) }))
-        .filter(r=>r.goal > 0);
-
-      await upsertWeeklyGoals(rows);
-      toast("Weekly goals saved");
-      await renderPackoutUI();
-    }catch(e){
-      console.error(e);
-      alert("Failed to save weekly goals. Check console.");
+  // ----------------------------
+  // Machines table (status)
+  // ----------------------------
+  async function ensureMachineRow(){
+    const { data, error } = await sb.from("machines").select("id").eq("id", machineId).maybeSingle();
+    if(error) throw error;
+    if(!data){
+      const ins = await sb.from("machines").insert([{ id: machineId, status:"running", status_since: new Date().toISOString(), note:"" }]);
+      if(ins.error) throw ins.error;
     }
-  };
+  }
+  async function getMachineState(){
+    const { data, error } = await sb
+      .from("machines")
+      .select("status,status_since,note,updated_at")
+      .eq("id", machineId)
+      .maybeSingle();
+    if(error) throw error;
+    return data || { status:"running", status_since:new Date().toISOString(), note:"" };
+  }
+  async function setMachineStatus(status){
+    const note = (statusNote.value || "").trim();
+    const up = await sb
+      .from("machines")
+      .update({ status, status_since: new Date().toISOString(), note, updated_at: new Date().toISOString() })
+      .eq("id", machineId);
+    if(up.error) throw up.error;
 
-  // Goals
-  const currentISO = isoDate(currentWeekStart);
-  const weeklyGoal = safeNum(goalMap.get(currentISO));
-
-  let monthlyGoal = 0;
-  for (const ws of weeks){
-    if (ws.getMonth() !== now.getMonth()) continue;
-    if (ws > currentWeekStart) continue;
-    monthlyGoal += safeNum(goalMap.get(isoDate(ws)));
+    await sb.from("status_log").insert([{
+      machine_id: machineId,
+      status,
+      note,
+      created_at: new Date().toISOString()
+    }]);
   }
 
-  let yearlyGoal = 0;
-  for (const ws of weeks){
-    if (ws > currentWeekStart) continue;
-    yearlyGoal += safeNum(goalMap.get(isoDate(ws)));
+  function applyStatusBadge(st){
+    const s = (st.status || "running").toLowerCase();
+    statusBadge.textContent = `Status: ${s}`;
+    statusBadge.style.background = (s==="running") ? "#dcfce7" : (s==="running-problems" ? "#fef9c3" : "#fee2e2");
+    statusBadge.style.color = "#111";
   }
 
-  // Actuals
-  const weeklyActual = await sumPackoutParts(isoDate(currentWeekStart), isoDate(nextWeekStart));
+  async function updateStatusTimerUI(){
+    const st = await getMachineState();
+    applyStatusBadge(st);
+    timerBadge.textContent = `Since: ${fmtTimeAgo(st.status_since)} ago`;
+    document.getElementById("lastUpdateLine").textContent = st.updated_at ? new Date(st.updated_at).toLocaleString() : "—";
+  }
 
-  const monthActualFrom = isoDate(startOfMonth(now));
-  const monthActualTo = isoDate(new Date(now.getFullYear(), now.getMonth()+1, 1));
-  const monthlyActual = await sumPackoutParts(monthActualFrom, monthActualTo);
+  // ----------------------------
+  // Project entries
+  // ----------------------------
+  let editingProjId = null;
+  function setProjEditMode(id){
+    editingProjId = id;
+    document.getElementById("projUpdateBtn").disabled = !editingProjId;
+  }
+  function getProjForm(){
+    return {
+      machine_id: machineId,
+      proj_date: document.getElementById("projDate").value || isoToday(),
+      engineer: (document.getElementById("projEngineer").value || "").trim(),
+      notes: (document.getElementById("projNotes").value || "").trim(),
+      created_at: new Date().toISOString()
+    };
+  }
+  function clearProjForm(){
+    document.getElementById("projDate").value = isoToday();
+    document.getElementById("projEngineer").value = "";
+    document.getElementById("projNotes").value = "";
+  }
+  async function fetchProjectEntries(){
+    const { data, error } = await sb
+      .from("project_entries")
+      .select("*")
+      .eq("machine_id", machineId)
+      .order("created_at", { ascending:false })
+      .limit(300);
+    if(error) throw error;
+    return data || [];
+  }
+  async function addProjectEntry(){
+    const ins = await sb.from("project_entries").insert([ getProjForm() ]);
+    if(ins.error) throw ins.error;
+    clearProjForm();
+    setProjEditMode(null);
+    await renderAll();
+  }
+  async function updateProjectEntry(){
+    if(!editingProjId) return;
+    const up = await sb.from("project_entries").update(getProjForm()).eq("id", editingProjId);
+    if(up.error) throw up.error;
+    clearProjForm();
+    setProjEditMode(null);
+    await renderAll();
+    await renderPackoutUI();
+  }
+  async function deleteProjectEntry(id){
+    const del = await sb.from("project_entries").delete().eq("id", id);
+    if(del.error) throw del.error;
+    if(editingProjId === id){ clearProjForm(); setProjEditMode(null); }
+    await renderAll();
+  }
 
-  const yearActualFrom = isoDate(startOfYear(now));
-  const yearActualTo = isoDate(new Date(now.getFullYear()+1, 0, 1));
-  const yearlyActual = await sumPackoutParts(yearActualFrom, yearActualTo);
+  // ----------------------------
+  // Production entries
+  // ----------------------------
+  let editingProdId = null;
+  function setProdEditMode(id){
+    editingProdId = id;
+    document.getElementById("prodUpdateBtn").disabled = !editingProdId;
+  }
+  function getProdForm(){
+    return {
+      machine_id: machineId,
+      prod_date: document.getElementById("prodDate").value || isoToday(),
+      parts_ran: safeNum(document.getElementById("prodParts").value),
+      scrap_qty: safeNum(document.getElementById("prodScrap").value),
+      scrap_reason: (document.getElementById("prodReason").value || "").trim(),
+      notes: (document.getElementById("prodNotes").value || "").trim(),
+      created_at: new Date().toISOString()
+    };
+  }
+  function clearProdForm(){
+    document.getElementById("prodDate").value = isoToday();
+    document.getElementById("prodParts").value = "";
+    document.getElementById("prodScrap").value = "";
+    document.getElementById("prodReason").value = "";
+    document.getElementById("prodNotes").value = "";
+  }
+  async function fetchProductionEntries(){
+    const { data, error } = await sb
+      .from("production_entries")
+      .select("*")
+      .eq("machine_id", machineId)
+      .order("created_at", { ascending:false })
+      .limit(300);
+    if(error) throw error;
+    return data || [];
+  }
+  async function addProductionEntry(){
+    const ins = await sb.from("production_entries").insert([ getProdForm() ]);
+    if(ins.error) throw ins.error;
+    clearProdForm();
+    setProdEditMode(null);
+    await renderAll();
+    await renderPackoutUI();
+  }
+  async function updateProductionEntry(){
+    if(!editingProdId) return;
+    const up = await sb.from("production_entries").update(getProdForm()).eq("id", editingProdId);
+    if(up.error) throw up.error;
+    clearProdForm();
+    setProdEditMode(null);
+    await renderAll();
+    await renderPackoutUI();
+  }
+  async function deleteProductionEntry(id){
+    const del = await sb.from("production_entries").delete().eq("id", id);
+    if(del.error) throw del.error;
+    if(editingProdId === id){ clearProdForm(); setProdEditMode(null); }
+    await renderAll();
+    await renderPackoutUI();
+  }
 
-  const w = leftOrOver(weeklyGoal, weeklyActual);
-  const m = leftOrOver(monthlyGoal, monthlyActual);
-  const yy = leftOrOver(yearlyGoal, yearlyActual);
-  const pct = yearlyGoal > 0 ? Math.round((yearlyActual / yearlyGoal) * 1000)/10 : 0;
+  // ----------------------------
+  // Render tables
+  // ----------------------------
+  function renderProjectHistory(list){
+    const tbody = document.querySelector("#projTable tbody");
+    tbody.innerHTML = "";
+    for(const r of list){
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${fmtDate(r.proj_date)}</td>
+        <td>${(r.engineer||"")}</td>
+        <td>${(r.notes||"")}</td>
+        <td class="right">
+          <button data-edit="${r.id}">Edit</button>
+          <button class="danger" data-del="${r.id}">Del</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    }
+    tbody.querySelectorAll("button[data-edit]").forEach(b=>{
+      b.onclick = ()=>{
+        const id = b.getAttribute("data-edit");
+        const r = list.find(x=>String(x.id)===String(id));
+        if(!r) return;
+        document.getElementById("projDate").value = fmtDate(r.proj_date) || isoToday();
+        document.getElementById("projEngineer").value = r.engineer || "";
+        document.getElementById("projNotes").value = r.notes || "";
+        setProjEditMode(r.id);
+      };
+    });
+    tbody.querySelectorAll("button[data-del]").forEach(b=>{
+      b.onclick = async ()=>{
+        const id = b.getAttribute("data-del");
+        if(!confirm("Delete this project entry?")) return;
+        cloudLine.textContent = "Cloud: deleting project…";
+        try{
+          await deleteProjectEntry(id);
+          cloudLine.textContent = "Cloud: project deleted ✓";
+        }catch(e){
+          console.error(e);
+          cloudLine.textContent = "Cloud: project delete error";
+          alert("Error deleting project.");
+        }
+      };
+    });
+  }
 
-  weeklyPill.textContent = `Weekly goal ${weeklyGoal} | Actual ${weeklyActual} | ${w.label} ${w.value}`;
-  monthlyPill.textContent = `Monthly goal ${monthlyGoal} | Actual ${monthlyActual} | ${m.label} ${m.value}`;
-  yearlyPill.textContent = `Yearly goal ${yearlyGoal} | Actual ${yearlyActual} | ${yy.label} ${yy.value}`;
-  yearlyPctPill.textContent = `Year %: ${pct}%`;
-}
+  function renderProductionHistory(list){
+    const tbody = document.querySelector("#prodTable tbody");
+    tbody.innerHTML = "";
+    for(const r of list){
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${fmtDate(r.prod_date)}</td>
+        <td>${safeNum(r.parts_ran).toLocaleString()}</td>
+        <td>${safeNum(r.scrap_qty).toLocaleString()}</td>
+        <td>${(r.scrap_reason||"")}</td>
+        <td>${(r.notes||"")}</td>
+        <td class="right">
+          <button data-edit="${r.id}">Edit</button>
+          <button class="danger" data-del="${r.id}">Del</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    }
+    tbody.querySelectorAll("button[data-edit]").forEach(b=>{
+      b.onclick = ()=>{
+        const id = b.getAttribute("data-edit");
+        const r = list.find(x=>String(x.id)===String(id));
+        if(!r) return;
+        document.getElementById("prodDate").value = fmtDate(r.prod_date) || isoToday();
+        document.getElementById("prodParts").value = r.parts_ran ?? "";
+        document.getElementById("prodScrap").value = r.scrap_qty ?? "";
+        document.getElementById("prodReason").value = r.scrap_reason ?? "";
+        document.getElementById("prodNotes").value = r.notes ?? "";
+        setProdEditMode(r.id);
+      };
+    });
+    tbody.querySelectorAll("button[data-del]").forEach(b=>{
+      b.onclick = async ()=>{
+        const id = b.getAttribute("data-del");
+        if(!confirm("Delete this production entry?")) return;
+        cloudLine.textContent = "Cloud: deleting production…";
+        try{
+          await deleteProductionEntry(id);
+          cloudLine.textContent = "Cloud: production deleted ✓";
+        }catch(e){
+          console.error(e);
+          cloudLine.textContent = "Cloud: production delete error";
+          alert("Error deleting production.");
+        }
+      };
+    });
+  }
 
+  function updateInfoPills(projList, prodList){
+    document.getElementById("projCountPill").textContent = `Project entries: ${projList.length}`;
+    document.getElementById("prodCountPill").textContent = `Prod entries: ${prodList.length}`;
+    const total = projList.length + prodList.length;
+    const latestIso = [...projList, ...prodList].map(e => e.created_at || "").sort().pop();
+    document.getElementById("latestPill").textContent = `Latest: ${latestIso ? new Date(latestIso).toLocaleString() : "—"} (${total} total)`;
+  }
 
+  async function renderAll(){
+    await updateStatusTimerUI();
 
-renderPackoutUI();
+    const projList = await fetchProjectEntries();
+    const prodList = await fetchProductionEntries();
+    renderProjectHistory(projList);
+    renderProductionHistory(prodList);
+    updateInfoPills(projList, prodList);
+  }
+
+async function weekStartMonday(d=new Date()){
+      const dt = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      const day = dt.getDay(); // 0 Sun .. 6 Sat
+      const diff = (day === 0) ? -6 : (1 - day); // back/forward to Monday
+      dt.setDate(dt.getDate() + diff);
+      dt.setHours(0,0,0,0);
+      return dt;
+    }
+    function isoDate(d){
+      const y=d.getFullYear();
+      const m=String(d.getMonth()+1).padStart(2,"0");
+      const da=String(d.getDate()).padStart(2,"0");
+      return `${y}-${m}-${da}`;
+    }
+    function addDays(d, n){
+      const dt = new Date(d);
+      dt.setDate(dt.getDate() + n);
+      return dt;
+    }
+    function startOfMonth(d=new Date()){ return new Date(d.getFullYear(), d.getMonth(), 1); }
+    function startOfYear(d=new Date()){ return new Date(d.getFullYear(), 0, 1); }
+    function fmtMD(d){ return `${d.getMonth()+1}/${d.getDate()}`; }
+
+    async function fetchWeeklyGoals(year){
+      const y = year ?? (new Date()).getFullYear();
+      const { data, error } = await sb
+        .from("weekly_goals")
+        .select("week_start,goal")
+        .eq("machine_id","packout")
+        .gte("week_start", `${y}-01-01`)
+        .lte("week_start", `${y}-12-31`);
+      if (error) throw error;
+      return data || [];
+    }
+
+    async function upsertWeeklyGoals(rows){
+      const payload = rows.map(r=>({
+        machine_id: "packout",
+        week_start: r.week_start,
+        goal: r.goal
+      }));
+      const { error } = await sb.from("weekly_goals").upsert(payload, { onConflict: "machine_id,week_start" });
+      if (error) throw error;
+    }
+
+    async function sumPackoutParts(fromISO, toISOExclusive){
+      const { data, error } = await sb
+        .from("production_entries")
+        .select("prod_date,parts_ran")
+        .eq("machine_id", "packout")
+        .gte("prod_date", fromISO)
+        .lt("prod_date", toISOExclusive);
+      if (error) throw error;
+      return (data || []).reduce((a,r)=>a + safeNum(r.parts_ran), 0);
+    }
+
+    function leftOrOver(goal, actual){
+      const diff = (Number(goal||0) - Number(actual||0));
+      if (diff >= 0) return { label:"Left", value: diff };
+      return { label:"Over", value: Math.abs(diff) };
+    }
+
+    async function renderPackoutUI(){
+      const card = document.getElementById("packoutThroughputCard");
+      if (machineId !== "packout"){ card.style.display="none"; return; }
+      card.style.display="block";
+
+      const grid = document.getElementById("weeklyGoalsGrid");
+      const weeklyPill = document.getElementById("weeklyPill");
+      const monthlyPill = document.getElementById("monthlyPill");
+      const yearlyPill = document.getElementById("yearlyPill");
+      const yearlyPctPill = document.getElementById("yearlyPctPill");
+      const saveBtn = document.getElementById("saveWeeklyGoalsBtn");
+
+      const now = new Date();
+      const y = now.getFullYear();
+      const currentWeekStart = await weekStartMonday(now);
+      const nextWeekStart = addDays(currentWeekStart, 7);
+
+      // Build all Monday-start weeks for the year
+      const weeks = [];
+      let cur = await weekStartMonday(startOfYear(now));
+      const stop = await weekStartMonday(new Date(y+1,0,1));
+      while (cur < stop){
+        weeks.push(new Date(cur));
+        cur = addDays(cur, 7);
+      }
+
+      // Load goals
+      const goalRows = await fetchWeeklyGoals(y);
+      const goalMap = new Map(goalRows.map(r=>[r.week_start, safeNum(r.goal)]));
+
+      // Render weekly grid (inside existing card)
+      grid.innerHTML = "";
+      for (const ws of weeks){
+        const wsISO = isoDate(ws);
+        const isCurrent = wsISO === isoDate(currentWeekStart);
+
+        const wrap = document.createElement("div");
+        wrap.style.border = isCurrent ? "2px solid #0ea5e9" : "1px solid #ddd";
+        wrap.style.borderRadius = "12px";
+        wrap.style.padding = "10px";
+        wrap.style.background = "#fff";
+
+        const title = document.createElement("div");
+        title.style.fontWeight = "700";
+        title.style.marginBottom = "6px";
+        title.textContent = fmtMD(ws);
+
+        const inp = document.createElement("input");
+        inp.type = "number";
+        inp.min = "0";
+        inp.step = "1";
+        const v = goalMap.get(wsISO);
+        inp.value = (v && v > 0) ? String(v) : "";
+        inp.placeholder = "goal";
+        inp.dataset.weekStart = wsISO;
+        inp.style.width = "100%";
+
+        wrap.appendChild(title);
+        wrap.appendChild(inp);
+        grid.appendChild(wrap);
+      }
+
+      // Save handler
+      saveBtn.onclick = async ()=>{
+        const inputs = Array.from(grid.querySelectorAll("input[data-week-start]"));
+        const rows = inputs
+          .map(i=>({ week_start: i.dataset.weekStart, goal: safeNum(i.value) }))
+          .filter(r=>r.goal > 0);
+
+        cloudLine.textContent = "Cloud: saving weekly goals…";
+        try{
+          await upsertWeeklyGoals(rows);
+          cloudLine.textContent = "Cloud: weekly goals saved ✓";
+          await renderPackoutUI();
+        }catch(e){
+          console.error(e);
+          cloudLine.textContent = "Cloud: failed to save weekly goals";
+          alert("Failed to save weekly goals. Check console.");
+        }
+      };
+
+      // Goals: weekly / monthly cumulative / yearly cumulative (up to current week)
+      const currentISO = isoDate(currentWeekStart);
+      const weeklyGoal = safeNum(goalMap.get(currentISO));
+
+      let monthlyGoal = 0;
+      for (const ws of weeks){
+        if (ws.getMonth() !== now.getMonth()) continue;
+        if (ws > currentWeekStart) continue;
+        monthlyGoal += safeNum(goalMap.get(isoDate(ws)));
+      }
+
+      let yearlyGoal = 0;
+      for (const ws of weeks){
+        if (ws > currentWeekStart) continue;
+        yearlyGoal += safeNum(goalMap.get(isoDate(ws)));
+      }
+
+      // Actuals
+      const weeklyActual = await sumPackoutParts(isoDate(currentWeekStart), isoDate(nextWeekStart));
+
+      const monthStartISO = isoDate(startOfMonth(now));
+      const nextMonthISO = isoDate(new Date(now.getFullYear(), now.getMonth()+1, 1));
+      const monthlyActual = await sumPackoutParts(monthStartISO, nextMonthISO);
+
+      const yearStartISO = isoDate(startOfYear(now));
+      const nextYearISO = isoDate(new Date(now.getFullYear()+1, 0, 1));
+      const yearlyActual = await sumPackoutParts(yearStartISO, nextYearISO);
+
+      const w = leftOrOver(weeklyGoal, weeklyActual);
+      const m = leftOrOver(monthlyGoal, monthlyActual);
+      const yy = leftOrOver(yearlyGoal, yearlyActual);
+      const pct = yearlyGoal > 0 ? Math.round((yearlyActual / yearlyGoal) * 1000)/10 : 0;
+
+      weeklyPill.textContent = `Weekly goal ${weeklyGoal.toLocaleString()} | Actual ${weeklyActual.toLocaleString()} | ${w.label} ${w.value.toLocaleString()}`;
+      monthlyPill.textContent = `Monthly goal ${monthlyGoal.toLocaleString()} | Actual ${monthlyActual.toLocaleString()} | ${m.label} ${m.value.toLocaleString()}`;
+      yearlyPill.textContent = `Yearly goal ${yearlyGoal.toLocaleString()} | Actual ${yearlyActual.toLocaleString()} | ${yy.label} ${yy.value.toLocaleString()}`;
+      yearlyPctPill.textContent = `Year %: ${pct.toLocaleString()}%`;
+    }
+
+    // ---------- events ----------
+    document.getElementById("projSaveBtn").onclick = async ()=>{
+      cloudLine.textContent = "Cloud: saving project…";
+      try{
+        await addProjectEntry();
+        cloudLine.textContent = "Cloud: project saved ✓";
+      }catch(e){
+        console.error(e);
+        cloudLine.textContent = "Cloud: project save error";
+        alert("Error saving project. Check console.");
+      }
+    };
+    document.getElementById("projUpdateBtn").onclick = async ()=>{
+      cloudLine.textContent = "Cloud: updating project…";
+      try{
+        await updateProjectEntry();
+        cloudLine.textContent = "Cloud: project updated ✓";
+      }catch(e){
+        console.error(e);
+        cloudLine.textContent = "Cloud: project update error";
+        alert("Error updating project. Check console.");
+      }
+    };
+    document.getElementById("projCancelBtn").onclick = ()=>{
+      clearProjForm();
+      setProjEditMode(null);
+    };
+
+    document.getElementById("prodSaveBtn").onclick = async ()=>{
+      cloudLine.textContent = "Cloud: saving production…";
+      try{
+        await addProductionEntry();
+        cloudLine.textContent = "Cloud: production saved ✓";
+      }catch(e){
+        console.error(e);
+        cloudLine.textContent = "Cloud: production save error";
+        alert("Error saving production. Check console.");
+      }
+    };
+    document.getElementById("prodUpdateBtn").onclick = async ()=>{
+      cloudLine.textContent = "Cloud: updating production…";
+      try{
+        await updateProductionEntry();
+        cloudLine.textContent = "Cloud: production updated ✓";
+      }catch(e){
+        console.error(e);
+        cloudLine.textContent = "Cloud: production update error";
+        alert("Error updating production. Check console.");
+      }
+    };
+    document.getElementById("prodCancelBtn").onclick = ()=>{
+      clearProdForm();
+      setProdEditMode(null);
+    };
+
+    statusSelect.onchange = async ()=>{
+      const toStatus = statusSelect.value;
+      cloudLine.textContent = "Cloud: saving status…";
+      try{
+        await setMachineStatus(toStatus);
+        cloudLine.textContent = "Cloud: status saved ✓";
+        await updateStatusTimerUI();
+      }catch(e){
+        console.error(e);
+        cloudLine.textContent = "Cloud: status save error";
+        alert("Error saving status.");
+      }
+    };
+
+    document.getElementById("statusSaveBtn").onclick = async ()=>{
+      cloudLine.textContent = "Cloud: saving status…";
+      try{
+        await setMachineStatus(statusSelect.value);
+        cloudLine.textContent = "Cloud: status saved ✓";
+        await updateStatusTimerUI();
+      }catch(e){
+        console.error(e);
+        cloudLine.textContent = "Cloud: status save error";
+        alert("Error saving status.");
+      }
+    };
+    document.getElementById("statusClearNoteBtn").onclick = ()=>{
+      statusNote.value = "";
+    };
+
+    // ---------- init ----------
+    (async function init(){
+      try{
+        cloudLine.textContent = "Cloud: connecting…";
+        await ensureMachineRow();
+        clearProjForm();
+        clearProdForm();
+        setProjEditMode(null);
+        setProdEditMode(null);
+
+        await renderAll();
+        await renderPackoutUI();
+
+        const st = await getMachineState();
+        statusSelect.value = (st.status || "running").toLowerCase();
+
+        // timer updates (reads status_since periodically)
+        setInterval(async ()=>{
+          try{ await updateStatusTimerUI(); }catch(e){ /* ignore */ }
+        }, 15000);
+
+        cloudLine.textContent = "Cloud: ready ✓";
+      }catch(e){
+        console.error(e);
+        cloudLine.textContent = "Cloud: init error (check console)";
+      }
+    })();
 </script>
-
 </body>
 </html>
-
