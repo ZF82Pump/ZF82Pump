@@ -413,6 +413,7 @@
     return {
       machine_id: machineId,
       prod_date: document.getElementById("prodDate").value || isoToday(),
+      shift: (document.getElementById("prodShift").value || "").trim(),
       parts_ran: safeNum(document.getElementById("prodParts").value),
       scrap_qty: safeNum(document.getElementById("prodScrap").value),
       scrap_reason: (document.getElementById("prodReason").value || "").trim(),
@@ -422,6 +423,7 @@
   }
   function clearProdForm(){
     document.getElementById("prodDate").value = isoToday();
+    document.getElementById("prodShift").value = "";
     document.getElementById("prodParts").value = "";
     document.getElementById("prodScrap").value = "";
     document.getElementById("prodReason").value = "";
@@ -533,6 +535,7 @@
         const r = list.find(x=>String(x.id)===String(id));
         if(!r) return;
         document.getElementById("prodDate").value = fmtDate(r.prod_date) || isoToday();
+        document.getElementById("prodShift").value = r.shift || "";
         document.getElementById("prodParts").value = r.parts_ran ?? "";
         document.getElementById("prodScrap").value = r.scrap_qty ?? "";
         document.getElementById("prodReason").value = r.scrap_reason ?? "";
@@ -872,5 +875,6 @@ async function weekStartMonday(d=new Date()){
 </script>
 </body>
 </html>
+
 
 
