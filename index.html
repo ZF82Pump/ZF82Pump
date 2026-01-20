@@ -166,6 +166,12 @@
     .metric-row{ display:flex; justify-content:space-between; gap:10px; }
     .metric-row span{ white-space:nowrap; }
     .small-muted{ color:#444; font-weight:normal; }
+
+
+.badge-ok { background:#dcfce7; }
+.badge-warn { background:#fef9c3; }
+.badge-bad { background:#fee2e2; }
+.badge-na { background:#eee; }
   </style>
 </head>
 
@@ -489,6 +495,18 @@ async function fetchActualRange(fromISO, toISOExclusive){
   return (data || []).reduce((sum,r)=>sum + safeNum(r.parts_ran), 0);
 }
 
+
+function setActualColor(el, goal, actual){
+  if(!el) return;
+  el.classList.remove("badge-ok","badge-warn","badge-bad","badge-na");
+  const g = Number(goal||0);
+  const a = Number(actual||0);
+  if(g <= 0){ el.classList.add("badge-na"); return; }
+  if(a >= g) el.classList.add("badge-ok");
+  else if(a >= 0.9 * g) el.classList.add("badge-warn");
+  else el.classList.add("badge-bad");
+}
+
 function leftOrOver(goal, actual){
   const diff = Number(goal||0) - Number(actual||0);
   if (diff >= 0) return { label: "Left", value: diff };
@@ -558,16 +576,19 @@ async function renderPackoutBadge(){
 
     if (els.wGoal) els.wGoal.textContent = weeklyGoal.toLocaleString();
     if (els.wAct) els.wAct.textContent = weeklyActual.toLocaleString();
+    setActualColor(els.wAct, weeklyGoal, weeklyActual);
     if (els.wDLab) els.wDLab.textContent = w.label;
     if (els.wD) els.wD.textContent = w.value.toLocaleString();
 
     if (els.mGoal) els.mGoal.textContent = monthlyGoal.toLocaleString();
     if (els.mAct) els.mAct.textContent = monthlyActual.toLocaleString();
+    setActualColor(els.mAct, monthlyGoal, monthlyActual);
     if (els.mDLab) els.mDLab.textContent = m.label;
     if (els.mD) els.mD.textContent = m.value.toLocaleString();
 
     if (els.yGoal) els.yGoal.textContent = yearlyGoal.toLocaleString();
     if (els.yAct) els.yAct.textContent = yearlyActual.toLocaleString();
+    setActualColor(els.yAct, yearlyGoal, yearlyActual);
     if (els.yDLab) els.yDLab.textContent = y.label;
     if (els.yD) els.yD.textContent = y.value.toLocaleString();
 
