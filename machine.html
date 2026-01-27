@@ -902,7 +902,7 @@ async function weekStartMonday(d=new Date()){
         }, 15000);
 
         cloudLine.textContent = "Cloud: ready ✓";
-      catch(e){
+      }catch(e){
         console.error(e);
         cloudLine.textContent = "Cloud: init error (check console)";
       }
@@ -910,6 +910,7 @@ async function weekStartMonday(d=new Date()){
 </script>
 </body>
 </html>
+
 
 
 
