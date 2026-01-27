@@ -65,8 +65,9 @@
           <label>Status</label>
           <select id="statusSelect">
             <option value="running">Running</option>
-            <option value="running-problems">Running - Needs Work</option>
+            <option value="problems">Problems</option>
             <option value="down">Down</option>
+            <option value="no_operator">No Operator</option>
           </select>
         </div>
         <div>
@@ -319,26 +320,58 @@
     return data || { status:"running", status_since:new Date().toISOString(), note:"" };
   }
   async function setMachineStatus(status){
+    // Normalize legacy values (machine.html used to save "running-problems")
+    let toStatus = (status || "running").toLowerCase();
+    if (toStatus === "running-problems") toStatus = "problems";
+
     const note = (statusNote.value || "").trim();
+
+    // read current to log from_status (matches index.html status_log)
+    const { data: cur, error: curErr } = await sb
+      .from("machines")
+      .select("status")
+      .eq("id", machineId)
+      .maybeSingle();
+    if (curErr) throw curErr;
+    const fromStatus = (cur?.status || "running").toLowerCase();
+
+    const nowIso = new Date().toISOString();
+
     const up = await sb
       .from("machines")
-      .update({ status, status_since: new Date().toISOString(), note, updated_at: new Date().toISOString() })
+      .update({ status: toStatus, status_since: nowIso, note, updated_at: nowIso })
       .eq("id", machineId);
-    if(up.error) throw up.error;
+    if (up.error) throw up.error;
 
-    await sb.from("status_log").insert([{
-      machine_id: machineId,
-      status,
-      note,
-      created_at: new Date().toISOString()
-    }]);
+    // status log (align with index.html columns)
+    const log = await sb
+      .from("status_log")
+      .insert([{ machine_id: machineId, changed_at: nowIso, from_status: fromStatus, to_status: toStatus }]);
+    if (log.error) throw log.error;
+  }]);
   }
 
   function applyStatusBadge(st){
     const s = (st.status || "running").toLowerCase();
     statusBadge.textContent = `Status: ${s}`;
-    statusBadge.style.background = (s==="running") ? "#dcfce7" : (s==="running-problems" ? "#fef9c3" : "#fee2e2");
-    statusBadge.style.color = "#111";
+
+    // Light "tint" colors for the badge (layout uses solid colors)
+    if (s === "running"){
+      statusBadge.style.background = "#dcfce7"; // green tint
+      statusBadge.style.color = "#111";
+    } else if (s === "problems"){
+      statusBadge.style.background = "#fef9c3"; // yellow tint
+      statusBadge.style.color = "#111";
+    } else if (s === "down"){
+      statusBadge.style.background = "#fee2e2"; // red tint
+      statusBadge.style.color = "#111";
+    } else if (s === "no_operator"){
+      statusBadge.style.background = "#dbeafe"; // blue tint
+      statusBadge.style.color = "#111";
+    } else {
+      statusBadge.style.background = "#eee";
+      statusBadge.style.color = "#111";
+    }
   }
 
   async function updateStatusTimerUI(){
@@ -862,7 +895,7 @@ async function weekStartMonday(d=new Date()){
         await renderPackoutUI();
 
         const st = await getMachineState();
-        statusSelect.value = (st.status || "running").toLowerCase();
+        statusSelect.value = ((st.status || "running").toLowerCase() === "running-problems") ? "problems" : (st.status || "running").toLowerCase();
 
         // timer updates (reads status_since periodically)
         setInterval(async ()=>{
@@ -878,4 +911,3 @@ async function weekStartMonday(d=new Date()){
 </script>
 </body>
 </html>
-
