@@ -348,7 +348,8 @@
       .from("status_log")
       .insert([{ machine_id: machineId, changed_at: nowIso, from_status: fromStatus, to_status: toStatus }]);
     if (log.error) throw log.error;
-  
+  }
+
 
   function applyStatusBadge(st){
     const s = (st.status || "running").toLowerCase();
@@ -894,7 +895,7 @@ async function weekStartMonday(d=new Date()){
         await renderPackoutUI();
 
         const st = await getMachineState();
-        statusSelect.value = ((st.status || "running").toLowerCase() === "running-problems") ? "problems" : (st.status || "running").toLowerCase();
+        statusSelect.value = (((st.status || "running").toLowerCase()) === "running-problems") ? "problems" : (st.status || "running").toLowerCase();
 
         // timer updates (reads status_since periodically)
         setInterval(async ()=>{
@@ -906,12 +907,7 @@ async function weekStartMonday(d=new Date()){
         console.error(e);
         cloudLine.textContent = "Cloud: init error (check console)";
       }
-  
+    })();
 </script>
 </body>
 </html>
-
-
-
-
-
