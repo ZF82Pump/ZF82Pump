@@ -80,6 +80,11 @@
         <button id="statusSaveBtn" class="primary">Save Status</button>
         <button id="statusClearNoteBtn">Clear Note</button>
       </div>
+      <!-- Latest status note display (read-only) -->
+<div class="note" id="statusNoteDisplay" style="margin-top:8px;">
+  Note: —
+</div>
+
 
       <!-- Packout goal card -->
       <div class="card" style="margin-top:12px;">
@@ -377,6 +382,18 @@
   async function updateStatusTimerUI(){
     const st = await getMachineState();
     applyStatusBadge(st);
+    const nd = document.getElementById("statusNoteDisplay");
+if (nd) {
+  nd.textContent = (st.note && st.note.trim())
+    ? `Note: ${st.note}`
+    : "Note: —";
+}
+
+// Optional: keep input synced with last saved note
+if (statusNote) {
+  statusNote.value = st.note || "";
+}
+
     timerBadge.textContent = `Since: ${fmtTimeAgo(st.status_since)} ago`;
     document.getElementById("lastUpdateLine").textContent = st.updated_at ? new Date(st.updated_at).toLocaleString() : "—";
   }
@@ -911,3 +928,4 @@ async function weekStartMonday(d=new Date()){
 </script>
 </body>
 </html>
+
