@@ -828,7 +828,7 @@ async function updatePumpWeeklyBadges(){
   }
 }
 
-function init(){
+async function init(){
     try{
       wireBoxClicks();
             await applySavedLayout();
@@ -845,7 +845,7 @@ await loadBoard();
       cloudPill.textContent = "Cloud: connection error";
       alert("Cloud connection error. Check console + Supabase keys/RLS.");
     }
-  })();
+  }();
 </script>
 </body>
 </html>
