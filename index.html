@@ -845,35 +845,7 @@ await loadBoard();
       alert("Cloud connection error. Check console + Supabase keys/RLS.");
     }
 </script>
-
-<script>
-  const SUPABASE_URL = "https://vycwkgpdivxazjgsrgiq.supabase.co";
-  const SUPABASE_ANON_KEY = "sb_publishable_aAjs8tF_8c8sB30ekxSXZQ_KxaBMBTE";
-
-  function loadSupabaseThen(run) {
-    const s = document.createElement("script");
-    s.src = "https://unpkg.com/@supabase/supabase-js@2";
-    s.onload = run;
-    s.onerror = () => {
-      console.error("Failed to load Supabase JS");
-      alert("Supabase library failed to load.");
-    };
-    document.head.appendChild(s);
-  }
-
-  loadSupabaseThen(() => {
-    if (!window.supabase) {
-      console.error("Supabase loaded but window.supabase is undefined");
-      return;
-    }
-    window.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: { persistSession:false, autoRefreshToken:false, detectSessionInUrl:false }
-    });
-
-  });
-</script>
-
-
+  
 <script>
   const SUPABASE_URL = "https://vycwkgpdivxazjgsrgiq.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_aAjs8tF_8c8sB30ekxSXZQ_KxaBMBTE";
