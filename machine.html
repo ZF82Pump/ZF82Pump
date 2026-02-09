@@ -1067,46 +1067,5 @@ async function renderPumpMetrics(){
     }
 </script>
 
-<script>
-  const SUPABASE_URL = "https://vycwkgpdivxazjgsrgiq.supabase.co";
-  const SUPABASE_ANON_KEY = "REPLACE_WITH_YOUR_ANON_KEY";
-
-  function loadSupabaseThen(run) {
-    const s = document.createElement("script");
-    s.src = "https://unpkg.com/@supabase/supabase-js@2";
-    s.onload = run;
-    s.onerror = () => {
-      console.error("Failed to load Supabase JS");
-      alert("Supabase library failed to load.");
-    };
-    document.head.appendChild(s);
-  }
-
-  loadSupabaseThen(() => {
-    if (!window.supabase) {
-      console.error("Supabase loaded but window.supabase is undefined");
-      return;
-    }
-
-    window.sb = window.supabase.createClient(
-      SUPABASE_URL,
-      SUPABASE_ANON_KEY,
-      {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-          detectSessionInUrl: false
-        }
-      }
-    );
-
-    if (typeof init === "function") {
-      init();
-    } else {
-      console.error("init() is not defined");
-    }
-  });
-</script>
-
 </body>
 </html>
