@@ -265,9 +265,20 @@
   // ----------------------------
   // Supabase
   // ----------------------------
-  const SUPABASE_URL = "https://vycwkgpdivxazjgsrgiq.supabase.co";
-  const SUPABASE_ANON_KEY = "sb_publishable_aAjs8tF_8c8sB30ekxSXZQ_KxaBMBTE";
-  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const SUPABASE_URL = "https://vycwkgpdivxazjgsrgiq.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_aAjs8tF_8c8sB30ekxSXZQ_KxaBMBTE";
+
+function loadSupabaseThen(run) {
+  const s = document.createElement("script");
+  s.src = "https://unpkg.com/@supabase/supabase-js@2";
+  s.onload = run;
+  s.onerror = () => {
+    console.error("Failed to load Supabase JS");
+    alert("Supabase library failed to load.");
+  };
+  document.head.appendChild(s);
+}
+
 
   // ----------------------------
   // URL machine id
