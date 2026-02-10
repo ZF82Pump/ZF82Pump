@@ -1,4 +1,4 @@
-<!doctype html>
+layou<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -6,7 +6,7 @@
   <title>Assembly Line Layout</title>
 
   <style>
-    /* ===== Modern theme patch ===== */
+  /* ===== Modern theme patch ===== */
 :root{
   --bg: #0b0f17;
   --panel: rgba(255,255,255,0.06);
@@ -39,15 +39,6 @@ html, body{
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Top bar / header (if you have one) */
-.header, .topbar, .toolbar{
-  background: rgba(255,255,255,0.04);
-  border: 1px solid var(--stroke);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-soft);
-  backdrop-filter: blur(10px);
-}
-
 /* Generic panels/cards (packout badge, admin, etc.) */
 .card, .panel, .badge, .packout-badge, #packoutBadge, #packoutCard{
   background: linear-gradient(180deg, var(--panel-2), var(--panel));
@@ -57,7 +48,7 @@ html, body{
   backdrop-filter: blur(10px);
 }
 
-/* Machine boxes */
+/* Machine boxes (visuals only — positioning rules below) */
 .box{
   background: rgba(255,255,255,0.05);
   border: 1px solid var(--stroke);
@@ -66,14 +57,12 @@ html, body{
   transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
   overflow: hidden;
 }
-
 .box:hover{
   transform: translateY(-1px);
   border-color: var(--stroke-2);
   box-shadow: 0 12px 30px rgba(0,0,0,0.35);
 }
 
-/* Machine labels */
 .box .label, .box .title, .machine-label{
   font-weight: 650;
   letter-spacing: 0.2px;
@@ -81,7 +70,6 @@ html, body{
   text-shadow: 0 1px 0 rgba(0,0,0,0.35);
 }
 
-/* Status color treatment: keep your existing classes but give them a cleaner look */
 .running, .status-running{
   border-color: rgba(34,197,94,0.55) !important;
   box-shadow: 0 0 0 2px rgba(34,197,94,0.18) inset, var(--shadow-soft);
@@ -99,7 +87,6 @@ html, body{
   box-shadow: 0 0 0 2px rgba(59,130,246,0.18) inset, var(--shadow-soft);
 }
 
-/* Small badges (WTD next to pumps, etc.) */
 .pill, .mini-badge, .wtd-badge, .smallBadge{
   display: inline-flex;
   align-items: center;
@@ -115,40 +102,6 @@ html, body{
   box-shadow: 0 8px 20px rgba(0,0,0,0.18);
 }
 
-/* Packout legend inside badge */
-.legend{
-  display: grid;
-  gap: 6px;
-  margin-top: 10px;
-}
-.legend-item{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding: 7px 10px;
-  border: 1px solid var(--stroke);
-  border-radius: 12px;
-  background: rgba(255,255,255,0.04);
-}
-.legend-dot{
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  margin-right: 10px;
-  display:inline-block;
-}
-.legend-left{
-  display:flex; align-items:center; gap:10px;
-  color: var(--muted);
-  font-weight: 600;
-  font-size: 12px;
-}
-.legend-right{
-  color: var(--muted);
-  font-size: 12px;
-}
-
-/* Buttons */
 button, .btn{
   background: rgba(255,255,255,0.06);
   color: var(--text);
@@ -157,21 +110,68 @@ button, .btn{
   padding: 8px 12px;
   font-weight: 650;
   box-shadow: 0 8px 20px rgba(0,0,0,0.20);
-  transition: transform .12s ease, border-color .12s ease, background .12s ease;
 }
 button:hover, .btn:hover{
-  transform: translateY(-1px);
   border-color: var(--stroke-2);
   background: rgba(255,255,255,0.08);
 }
-button:active, .btn:active{
-  transform: translateY(0px);
+
+.muted, .subtle, small{ color: var(--muted); }
+
+/* ============================================================
+   Layout-critical CSS (DO NOT REMOVE)
+   This is what makes the saved layout positions apply correctly
+   ============================================================ */
+
+/* The board/container must be the positioning context */
+#board, #layoutBoard, .board, .layout-board, #canvas, .canvas{
+  position: relative !important;
+  width: 100%;
+  height: 100%;
 }
 
-/* Muted text */
-.muted, .subtle, small{
-  color: var(--muted);
+/* Machines must be positioned by top/left/width/height from Supabase */
+.box{
+  position: absolute !important;
+  box-sizing: border-box;
 }
+
+/* If your code uses data-x/y/w/h transforms or resize handles */
+.box.selected{
+  outline: 2px solid rgba(99,102,241,0.55);
+  outline-offset: 0px;
+}
+
+/* Keep badges clickable and above the board */
+.badge, .packout-badge, #packoutBadge, #packoutCard{
+  position: absolute;  /* only if your badge is positioned like a box */
+  z-index: 50;
+}
+
+.box{
+  z-index: 10;
+}
+
+/* Optional: ensure links/buttons in boxes remain clickable */
+.box a, .box button{
+  position: relative;
+  z-index: 2;
+}
+
+/* Optional: if you had a grid background previously, you can bring it back subtly */
+#board::before, .board::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity: 0.25;
+  pointer-events:none;
+  border-radius: 18px;
+}
+
   </style>
 </head>
 
