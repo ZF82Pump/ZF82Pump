@@ -628,7 +628,7 @@ async function renderPackoutBadge(){
     if (els.wTodayGoal) els.wTodayGoal.textContent = weeklyGoalByToday.toLocaleString();
     if (els.wAct) els.wAct.textContent = weeklyActual.toLocaleString();
     setActualColor(els.wAct, weeklyGoalByToday, weeklyActual);
-    if (els.wDLab) els.wDLab.textContent = w.label === "Left" ? "Left to pace" : "Over pace";
+    if (els.wDLab) els.wDLab.textContent = w.label === "Left" ? "Left" : "Over";
     if (els.wD) els.wD.textContent = w.value.toLocaleString();
 
     if (els.mGoal) els.mGoal.textContent = monthlyGoal.toLocaleString();
